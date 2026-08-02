@@ -10,33 +10,141 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CumplimientoRouteImport } from './routes/cumplimiento'
+import { Route as ExportacionRouteImport } from './routes/exportacion'
+import { Route as FuentesRouteImport } from './routes/fuentes'
+import { Route as PromptsRouteImport } from './routes/prompts'
+import { Route as IdeasIdeaIdRouteImport } from './routes/ideas.$ideaId'
+import { Route as IdeasNuevaRouteImport } from './routes/ideas.nueva'
+import { Route as LeadsIndexRouteImport } from './routes/leads.index'
+import { Route as LeadsLeadIdRouteImport } from './routes/leads.$leadId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CumplimientoRoute = CumplimientoRouteImport.update({
+  id: '/cumplimiento',
+  path: '/cumplimiento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExportacionRoute = ExportacionRouteImport.update({
+  id: '/exportacion',
+  path: '/exportacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuentesRoute = FuentesRouteImport.update({
+  id: '/fuentes',
+  path: '/fuentes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PromptsRoute = PromptsRouteImport.update({
+  id: '/prompts',
+  path: '/prompts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IdeasIdeaIdRoute = IdeasIdeaIdRouteImport.update({
+  id: '/ideas/$ideaId',
+  path: '/ideas/$ideaId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IdeasNuevaRoute = IdeasNuevaRouteImport.update({
+  id: '/ideas/nueva',
+  path: '/ideas/nueva',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadsIndexRoute = LeadsIndexRouteImport.update({
+  id: '/leads/',
+  path: '/leads/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadsLeadIdRoute = LeadsLeadIdRouteImport.update({
+  id: '/leads/$leadId',
+  path: '/leads/$leadId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cumplimiento': typeof CumplimientoRoute
+  '/exportacion': typeof ExportacionRoute
+  '/fuentes': typeof FuentesRoute
+  '/prompts': typeof PromptsRoute
+  '/ideas/$ideaId': typeof IdeasIdeaIdRoute
+  '/ideas/nueva': typeof IdeasNuevaRoute
+  '/leads/$leadId': typeof LeadsLeadIdRoute
+  '/leads/': typeof LeadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cumplimiento': typeof CumplimientoRoute
+  '/exportacion': typeof ExportacionRoute
+  '/fuentes': typeof FuentesRoute
+  '/prompts': typeof PromptsRoute
+  '/ideas/$ideaId': typeof IdeasIdeaIdRoute
+  '/ideas/nueva': typeof IdeasNuevaRoute
+  '/leads/$leadId': typeof LeadsLeadIdRoute
+  '/leads': typeof LeadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cumplimiento': typeof CumplimientoRoute
+  '/exportacion': typeof ExportacionRoute
+  '/fuentes': typeof FuentesRoute
+  '/prompts': typeof PromptsRoute
+  '/ideas/$ideaId': typeof IdeasIdeaIdRoute
+  '/ideas/nueva': typeof IdeasNuevaRoute
+  '/leads/$leadId': typeof LeadsLeadIdRoute
+  '/leads/': typeof LeadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/cumplimiento'
+    | '/exportacion'
+    | '/fuentes'
+    | '/prompts'
+    | '/ideas/$ideaId'
+    | '/ideas/nueva'
+    | '/leads/$leadId'
+    | '/leads/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/cumplimiento'
+    | '/exportacion'
+    | '/fuentes'
+    | '/prompts'
+    | '/ideas/$ideaId'
+    | '/ideas/nueva'
+    | '/leads/$leadId'
+    | '/leads'
+  id:
+    | '__root__'
+    | '/'
+    | '/cumplimiento'
+    | '/exportacion'
+    | '/fuentes'
+    | '/prompts'
+    | '/ideas/$ideaId'
+    | '/ideas/nueva'
+    | '/leads/$leadId'
+    | '/leads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CumplimientoRoute: typeof CumplimientoRoute
+  ExportacionRoute: typeof ExportacionRoute
+  FuentesRoute: typeof FuentesRoute
+  PromptsRoute: typeof PromptsRoute
+  IdeasIdeaIdRoute: typeof IdeasIdeaIdRoute
+  IdeasNuevaRoute: typeof IdeasNuevaRoute
+  LeadsLeadIdRoute: typeof LeadsLeadIdRoute
+  LeadsIndexRoute: typeof LeadsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +156,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cumplimiento': {
+      id: '/cumplimiento'
+      path: '/cumplimiento'
+      fullPath: '/cumplimiento'
+      preLoaderRoute: typeof CumplimientoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exportacion': {
+      id: '/exportacion'
+      path: '/exportacion'
+      fullPath: '/exportacion'
+      preLoaderRoute: typeof ExportacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fuentes': {
+      id: '/fuentes'
+      path: '/fuentes'
+      fullPath: '/fuentes'
+      preLoaderRoute: typeof FuentesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prompts': {
+      id: '/prompts'
+      path: '/prompts'
+      fullPath: '/prompts'
+      preLoaderRoute: typeof PromptsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ideas/$ideaId': {
+      id: '/ideas/$ideaId'
+      path: '/ideas/$ideaId'
+      fullPath: '/ideas/$ideaId'
+      preLoaderRoute: typeof IdeasIdeaIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ideas/nueva': {
+      id: '/ideas/nueva'
+      path: '/ideas/nueva'
+      fullPath: '/ideas/nueva'
+      preLoaderRoute: typeof IdeasNuevaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leads/': {
+      id: '/leads/'
+      path: '/leads'
+      fullPath: '/leads/'
+      preLoaderRoute: typeof LeadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leads/$leadId': {
+      id: '/leads/$leadId'
+      path: '/leads/$leadId'
+      fullPath: '/leads/$leadId'
+      preLoaderRoute: typeof LeadsLeadIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CumplimientoRoute: CumplimientoRoute,
+  ExportacionRoute: ExportacionRoute,
+  FuentesRoute: FuentesRoute,
+  PromptsRoute: PromptsRoute,
+  IdeasIdeaIdRoute: IdeasIdeaIdRoute,
+  IdeasNuevaRoute: IdeasNuevaRoute,
+  LeadsLeadIdRoute: LeadsLeadIdRoute,
+  LeadsIndexRoute: LeadsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
