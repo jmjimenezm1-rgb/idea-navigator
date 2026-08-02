@@ -26,7 +26,7 @@ export const Route = createFileRoute("/ideas/nueva")({
       { property: "og:description", content: "Wizard de 5 pasos para explorar la viabilidad de una idea de negocio." },
     ],
   }),
-  component: NuevaExploracion;
+  component: NuevaExploracion,
 });
 
 const steps = ["Descripción de la idea", "Cliente objetivo", "Criterios de búsqueda", "Restricciones", "Lanzar análisis"];
