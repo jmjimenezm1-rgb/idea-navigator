@@ -1,0 +1,291 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Save, Search, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+
+import { AppShell } from "@/components/AppShell";
+import { Pill } from "@/components/StatusBadges";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+
+export const Route = createFileRoute("/ideas/nueva")({
+  head: () => ({
+    meta: [
+      { title: "Nueva exploración de idea | MarketingHub AI" },
+      {
+        name: "description",
+        content:
+          "Formulario guiado para describir una idea de negocio, definir el cliente objetivo, los criterios de búsqueda y las restricciones legales antes de lanzar el análisis.",
+      },
+      { property: "og:title", content: "Nueva exploración de idea | MarketingHub AI" },
+      { property: "og:description", content: "Wizard de 5 pasos para explorar la viabilidad de una idea de negocio." },
+    ],
+  }),
+  component: NuevaExploracion;
+});
+
+const steps = ["Descripción de la idea", "Cliente objetivo", "Criterios de búsqueda", "Restricciones", "Lanzar análisis"];
+
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground uppercase">{label}</Label>
+      {children}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function NuevaExploracion() {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+  const [confidence, setConfidence] = useState([60]);
+  const [maxResults, setMaxResults] = useState([50]);
+  const [name, setName] = useState("");
+
+  const restrictions = [
+    "Excluir empresas competidoras",
+    "Excluir empresas ya contactadas",
+    "Excluir empresas sin web corporativa",
+    "Excluir contactos sin fuente trazable",
+    "Excluir contactos personales no corporativos",
+    "Excluir datos sin trazabilidad documentada",
+  ];
+
+  return (
+    <AppShell title="Nueva exploración de idea" subtitle={`Paso ${step + 1} de 5 · ${steps[step]}`}>
+      <div className="mx-auto max-w-4xl space-y-6">
+        <ol className="flex flex-wrap gap-2">
+          {steps.map((s, i) => (
+            <li key={s}>
+              <button
+                onClick={() => setStep(i)}
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                  i === step
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : i < step
+                      ? "border-success/40 bg-success/10 text-success"
+                      : "border-border text-muted-foreground"
+                }`}
+              >
+                {i < step ? <Check className="size-3" /> : <span className="font-semibold">{i + 1}</span>}
+                {s}
+              </button>
+            </li>
+          ))}
+        </ol>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{steps[step]}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {step === 0 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Nombre de la idea">
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Mantenimiento predictivo industrial" />
+                </Field>
+                <Field label="Nivel de madurez">
+                  <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option>Idea inicial</option>
+                    <option>Producto definido</option>
+                    <option>MVP</option>
+                    <option>Producto en mercado</option>
+                  </select>
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Descripción del producto o servicio">
+                    <Textarea rows={3} placeholder="Qué hace y cómo funciona" />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Problema que resuelve">
+                    <Textarea rows={2} placeholder="Dolor concreto del cliente" />
+                  </Field>
+                </div>
+                <Field label="Beneficio principal">
+                  <Input placeholder="Ej. Reducir un 30% las paradas" />
+                </Field>
+                <Field label="Diferencial frente a alternativas">
+                  <Input placeholder="Ej. No requiere sustituir equipos" />
+                </Field>
+              </div>
+            )}
+
+            {step === 1 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Tipo de cliente">
+                  <Input placeholder="Ej. Empresa industrial con planta propia" />
+                </Field>
+                <Field label="Sector o sectores objetivo">
+                  <Input placeholder="Ej. Automoción, alimentación" />
+                </Field>
+                <Field label="País o zona geográfica">
+                  <Input placeholder="Ej. España, Portugal" />
+                </Field>
+                <Field label="Tamaño de empresa">
+                  <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option>10-49 empleados</option>
+                    <option>50-199 empleados</option>
+                    <option>200-499 empleados</option>
+                    <option>500+ empleados</option>
+                  </select>
+                </Field>
+                <Field label="Cargo o perfil objetivo">
+                  <Input placeholder="Ej. Director de Operaciones" />
+                </Field>
+                <Field label="Nivel de decisión del contacto">
+                  <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option>Decisor</option>
+                    <option>Prescriptor</option>
+                    <option>Influenciador</option>
+                    <option>Usuario</option>
+                  </select>
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Necesidad esperada">
+                    <Textarea rows={2} placeholder="Qué esperas que necesite este cliente" />
+                  </Field>
+                </div>
+                <Field label="Objetivo comercial">
+                  <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option>Validar interés</option>
+                    <option>Captar leads</option>
+                    <option>Vender</option>
+                    <option>Generar reuniones</option>
+                    <option>Analizar mercado</option>
+                  </select>
+                </Field>
+                <Field label="Canal comercial previsto">
+                  <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option>Email</option>
+                    <option>LinkedIn</option>
+                    <option>Llamada</option>
+                    <option>WhatsApp (requiere opt-in específico)</option>
+                    <option>Otro</option>
+                  </select>
+                </Field>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Palabras clave">
+                  <Input placeholder="mantenimiento predictivo, OEE" />
+                </Field>
+                <Field label="Palabras excluidas">
+                  <Input placeholder="formación, consultoría genérica" />
+                </Field>
+                <Field label="Ubicación">
+                  <Input placeholder="Cataluña, País Vasco" />
+                </Field>
+                <Field label="Idioma">
+                  <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option>Español</option>
+                    <option>Inglés</option>
+                    <option>Portugués</option>
+                    <option>Francés</option>
+                  </select>
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Fuentes preferidas" hint="En esta versión solo están activas las fuentes demo y la carga manual.">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {["Datos simulados (demo)", "Carga manual / URLs", "Firecrawl (futuro)", "Apify (futuro)", "Google Custom Search (futuro)", "CRM interno (futuro)"].map(
+                        (s, i) => (
+                          <label key={s} className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
+                            <Checkbox defaultChecked={i < 2} disabled={i >= 2} />
+                            <span className={i >= 2 ? "text-muted-foreground" : ""}>{s}</span>
+                          </label>
+                        ),
+                      )}
+                    </div>
+                  </Field>
+                </div>
+                <Field label={`Número máximo de resultados: ${maxResults[0]}`}>
+                  <Slider value={maxResults} onValueChange={setMaxResults} min={10} max={200} step={10} />
+                </Field>
+                <Field label={`Nivel mínimo de confianza: ${confidence[0]}`}>
+                  <Slider value={confidence} onValueChange={setConfidence} min={0} max={100} step={5} />
+                </Field>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Estas restricciones se aplican automáticamente durante la recuperación de datos y quedan registradas
+                  como evidencia de cumplimiento.
+                </p>
+                {restrictions.map((r, i) => (
+                  <label key={r} className="flex items-center gap-3 rounded-lg border border-border p-3 text-sm">
+                    <Checkbox defaultChecked={i > 2} />
+                    {r}
+                  </label>
+                ))}
+                <Field label="Restricciones legales o comerciales adicionales">
+                  <Textarea rows={2} placeholder="Ej. No contactar por WhatsApp sin opt-in específico" />
+                </Field>
+                <Field label="Competidores conocidos">
+                  <Input placeholder="Ej. Senseye, Augury" />
+                </Field>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
+                  <p className="font-medium">Antes de lanzar</p>
+                  <p className="mt-1 text-muted-foreground">
+                    El análisis genera estimaciones orientativas. La recuperación de datos se limita a información
+                    empresarial pública y trazable. Ningún mensaje se envía automáticamente.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Pill tone="info">Modo activo: datos simulados</Pill>
+                  <Pill tone="neutral">Prompt: Analisis_Viabilidad_Idea v1.2</Pill>
+                  <Pill tone="neutral">Modelo: google/gemini-3.6-flash (simulado)</Pill>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => {
+                      toast.success("Análisis de viabilidad generado (demo)");
+                      navigate({ to: "/ideas/$ideaId", params: { ideaId: "idea-1" } });
+                    }}
+                  >
+                    <Sparkles className="size-4" /> Analizar viabilidad
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      toast.success("Búsqueda simulada completada: 30 leads demo");
+                      navigate({ to: "/leads" });
+                    }}
+                  >
+                    <Search className="size-4" /> Buscar clientes potenciales
+                  </Button>
+                  <Button variant="outline" onClick={() => toast("Borrador guardado (demo)")}>
+                    <Save className="size-4" /> Guardar como borrador
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-between">
+          <Button variant="outline" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+            <ChevronLeft className="size-4" /> Anterior
+          </Button>
+          <Button disabled={step === 4} onClick={() => setStep((s) => s + 1)}>
+            Siguiente <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
