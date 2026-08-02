@@ -489,13 +489,13 @@ function makeLead(i: number): PotentialLead {
   const ideaId = i < 16 ? "idea-1" : i < 24 ? "idea-2" : "idea-3";
   const sector =
     ideaId === "idea-1"
-      ? sectors[i % 5]
+      ? sectors[i % 5]!
       : ideaId === "idea-2"
-        ? sectors[5 + (i % 2)]
+        ? sectors[5 + (i % 2)]!
         : "Retail / E-commerce";
   const country = i % 9 === 0 ? "Portugal" : i % 11 === 0 ? "Francia" : "España";
-  const cityList = cities[country];
-  const city = cityList[i % cityList.length];
+  const cityList = cities[country] ?? cities['España']!;
+  const city = cityList[i % cityList.length]!;
   const slug = `demo-empresa-${i + 1}`;
   const score = 42 + ((i * 13) % 55);
   const fit: FitLevel = score >= 78 ? "alto" : score >= 60 ? "medio" : "bajo";
@@ -557,7 +557,7 @@ function makeLead(i: number): PotentialLead {
     "Google Custom Search (demo)",
     "Carga manual",
   ];
-  const sourceName = validation === "No válido" ? "Sin fuente" : sourceNames[i % sourceNames.length];
+  const sourceName = validation === "No válido" ? "Sin fuente" : sourceNames[i % sourceNames.length]!;
 
   const contacts: LeadContact[] = hasContact
     ? [
@@ -567,10 +567,10 @@ function makeLead(i: number): PotentialLead {
           contact_name: `Contacto Demo ${i + 1}`,
           job_title:
             ideaId === "idea-1"
-              ? ["Director de Operaciones", "Jefe de Mantenimiento", "Plant Manager"][i % 3]
+              ? ["Director de Operaciones", "Jefe de Mantenimiento", "Plant Manager"][i % 3]!
               : ideaId === "idea-2"
-                ? ["Socio director", "Responsable de Compliance"][i % 2]
-                : ["Head of Logistics", "Supply Chain Manager"][i % 2],
+                ? ["Socio director", "Responsable de Compliance"][i % 2]!
+                : ["Head of Logistics", "Supply Chain Manager"][i % 2]!,
           corporate_email: `contacto${i + 1}@${slug}.example`,
           corporate_phone: i % 4 === 0 ? "+34 900 000 000 (centralita demo)" : null,
           profile_url: i % 3 === 0 ? `https://www.linkedin.com/company/${slug}` : null,
@@ -613,7 +613,7 @@ function makeLead(i: number): PotentialLead {
         : ideaId === "idea-2"
           ? "Actualizar el registro de actividades de tratamiento."
           : "Cubrir reparto en centro urbano sin penalización por emisiones.",
-    company_size: sizes[i % sizes.length],
+    company_size: sizes[i % sizes.length]!,
     customer_type: ideaId === "idea-3" ? "E-commerce" : "Empresa B2B",
     fit_level: fit,
     opportunity_score: score,
