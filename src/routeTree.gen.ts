@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CumplimientoRouteImport } from './routes/cumplimiento'
 import { Route as ExportacionRouteImport } from './routes/exportacion'
+import { Route as FuentesRouteImport } from './routes/fuentes'
 import { Route as IdeasIdeaIdRouteImport } from './routes/ideas.$ideaId'
 import { Route as IdeasNuevaRouteImport } from './routes/ideas.nueva'
 import { Route as LeadsIndexRouteImport } from './routes/leads.index'
@@ -30,6 +31,11 @@ const CumplimientoRoute = CumplimientoRouteImport.update({
 const ExportacionRoute = ExportacionRouteImport.update({
   id: '/exportacion',
   path: '/exportacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuentesRoute = FuentesRouteImport.update({
+  id: '/fuentes',
+  path: '/fuentes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IdeasIdeaIdRoute = IdeasIdeaIdRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cumplimiento': typeof CumplimientoRoute
   '/exportacion': typeof ExportacionRoute
+  '/fuentes': typeof FuentesRoute
   '/ideas/$ideaId': typeof IdeasIdeaIdRoute
   '/ideas/nueva': typeof IdeasNuevaRoute
   '/leads/$leadId': typeof LeadsLeadIdRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cumplimiento': typeof CumplimientoRoute
   '/exportacion': typeof ExportacionRoute
+  '/fuentes': typeof FuentesRoute
   '/ideas/$ideaId': typeof IdeasIdeaIdRoute
   '/ideas/nueva': typeof IdeasNuevaRoute
   '/leads/$leadId': typeof LeadsLeadIdRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/cumplimiento': typeof CumplimientoRoute
   '/exportacion': typeof ExportacionRoute
+  '/fuentes': typeof FuentesRoute
   '/ideas/$ideaId': typeof IdeasIdeaIdRoute
   '/ideas/nueva': typeof IdeasNuevaRoute
   '/leads/$leadId': typeof LeadsLeadIdRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/cumplimiento'
     | '/exportacion'
+    | '/fuentes'
     | '/ideas/$ideaId'
     | '/ideas/nueva'
     | '/leads/$leadId'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/cumplimiento'
     | '/exportacion'
+    | '/fuentes'
     | '/ideas/$ideaId'
     | '/ideas/nueva'
     | '/leads/$leadId'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/cumplimiento'
     | '/exportacion'
+    | '/fuentes'
     | '/ideas/$ideaId'
     | '/ideas/nueva'
     | '/leads/$leadId'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CumplimientoRoute: typeof CumplimientoRoute
   ExportacionRoute: typeof ExportacionRoute
+  FuentesRoute: typeof FuentesRoute
   IdeasIdeaIdRoute: typeof IdeasIdeaIdRoute
   IdeasNuevaRoute: typeof IdeasNuevaRoute
   LeadsLeadIdRoute: typeof LeadsLeadIdRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/exportacion'
       fullPath: '/exportacion'
       preLoaderRoute: typeof ExportacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fuentes': {
+      id: '/fuentes'
+      path: '/fuentes'
+      fullPath: '/fuentes'
+      preLoaderRoute: typeof FuentesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ideas/$ideaId': {
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CumplimientoRoute: CumplimientoRoute,
   ExportacionRoute: ExportacionRoute,
+  FuentesRoute: FuentesRoute,
   IdeasIdeaIdRoute: IdeasIdeaIdRoute,
   IdeasNuevaRoute: IdeasNuevaRoute,
   LeadsLeadIdRoute: LeadsLeadIdRoute,
