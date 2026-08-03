@@ -17,7 +17,8 @@ import { AppShell } from "@/components/AppShell";
 import { DemoTag, Pill, StatusBadge } from "@/components/StatusBadges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { businessIdeas, potentialLeads, viabilityAnalyses } from "@/lib/demo-data";
+import { useQuery } from "@tanstack/react-query";
+import { analysesQuery, ideasQuery, leadsQuery } from "@/lib/marketing-queries";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -66,7 +67,9 @@ function Kpi({ label, value, hint, tone }: { label: string; value: number | stri
 }
 
 function Dashboard() {
-  const leads = potentialLeads;
+  const { data: leads = [] } = useQuery(leadsQuery);
+  const { data: businessIdeas = [] } = useQuery(ideasQuery);
+  const { data: viabilityAnalyses = [] } = useQuery(analysesQuery);
   const validated = leads.filter((l) => ["Validado", "Consentimiento obtenido", "Convertido en cliente"].includes(l.validation_status));
   const pending = leads.filter((l) => l.validation_status.startsWith("Pendiente"));
   const notAllowed = leads.filter((l) => l.contact_allowed === "no");

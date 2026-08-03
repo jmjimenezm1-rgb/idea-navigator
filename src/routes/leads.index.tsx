@@ -10,7 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { businessIdeas, potentialLeads, validationStatuses } from "@/lib/demo-data";
+import { useQuery } from "@tanstack/react-query";
+import { validationStatuses } from "@/lib/demo-data";
+import { ideasQuery, leadsQuery } from "@/lib/marketing-queries";
 
 export const Route = createFileRoute("/leads/")({
   head: () => ({
@@ -31,6 +33,8 @@ export const Route = createFileRoute("/leads/")({
 const selectCls = "h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
 
 function LeadsPage() {
+  const { data: potentialLeads = [], isLoading } = useQuery(leadsQuery);
+  const { data: businessIdeas = [] } = useQuery(ideasQuery);
   const [sector, setSector] = useState("");
   const [country, setCountry] = useState("");
   const [size, setSize] = useState("");
@@ -55,7 +59,7 @@ function LeadsPage() {
           l.opportunity_score >= minScore &&
           (!q || l.company_name.toLowerCase().includes(q.toLowerCase())),
       ),
-    [sector, country, size, status, allowed, risk, idea, minScore, q],
+    [potentialLeads, sector, country, size, status, allowed, risk, idea, minScore, q],
   );
 
   const uniq = (fn: (l: (typeof potentialLeads)[number]) => string) => [...new Set(potentialLeads.map(fn))];
@@ -63,7 +67,7 @@ function LeadsPage() {
   return (
     <AppShell
       title="Clientes potenciales"
-      subtitle={`${rows.length} de ${potentialLeads.length} leads · empresas ficticias de demostración`}
+      subtitle={`${rows.length} de ${potentialLeads.length} leads · datos en base de datos`}
       actions={
         <>
           <Button variant="outline" onClick={() => toast("Enriquecimiento simulado: conector no configurado")}>
@@ -232,7 +236,7 @@ function LeadsPage() {
               </TableBody>
             </Table>
             {rows.length === 0 && (
-              <p className="p-6 text-center text-sm text-muted-foreground">Ningún lead cumple los filtros aplicados.</p>
+              <p className="p-6 text-center text-sm text-muted-foreground">{isLoading ? "Cargando leads…" : "Ningún lead cumple los filtros aplicados."}</p>
             )}
           </CardContent>
         </Card>

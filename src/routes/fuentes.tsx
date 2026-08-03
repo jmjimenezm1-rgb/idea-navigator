@@ -5,7 +5,8 @@ import { Pill } from "@/components/StatusBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { dataSources } from "@/lib/demo-data";
+import { useQuery } from "@tanstack/react-query";
+import { sourcesQuery } from "@/lib/marketing-queries";
 
 export const Route = createFileRoute("/fuentes")({
   head: () => ({
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/fuentes")({
 });
 
 function Fuentes() {
+  const { data: dataSources = [] } = useQuery(sourcesQuery);
   return (
     <AppShell title="Fuentes de datos" subtitle="Modo activo: datos simulados y carga manual">
       <div className="grid gap-3 lg:grid-cols-2">
