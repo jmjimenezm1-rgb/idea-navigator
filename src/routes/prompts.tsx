@@ -18,6 +18,7 @@ export const Route = createFileRoute("/prompts")({
 });
 
 function Prompts() {
+  const { data: aiPrompts = [] } = useQuery(promptsQuery);
   return (
     <AppShell title="Administración IA" subtitle="Catálogo de prompts versionados · ningún prompt vive en el código">
       <div className="space-y-3">

@@ -26,6 +26,7 @@ export const Route = createFileRoute("/cumplimiento")({
 });
 
 function Cumplimiento() {
+  const { data: potentialLeads = [] } = useQuery(leadsQuery);
   const sinFuente = potentialLeads.filter((l) => !l.source_url);
   const pendientes = potentialLeads.filter((l) => l.contact_allowed === "pendiente");
   const bloqueados = potentialLeads.filter((l) => l.contact_allowed === "no");

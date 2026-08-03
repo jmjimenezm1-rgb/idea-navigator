@@ -21,10 +21,26 @@ export const Route = createFileRoute("/exportacion")({
 });
 
 function Exportacion() {
+  const { data: potentialLeads = [] } = useQuery(leadsQuery);
   const validados = potentialLeads.filter((l) => l.contact_allowed === "sí");
   const excluidos = potentialLeads.length - validados.length;
 
-  const exportar = () => {
+  const exportar = async () => {
+    try {
+      const { csv, count } = await exportEligibleLeads();
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "leads-validados.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`CSV descargado con ${count} leads aptos`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo exportar");
+    }
+  };
+
+  const exportarLocal = () => {
     const header = ["empresa", "sector", "pais", "web", "score", "estado", "fuente", "url_origen", "fecha", "apto_contacto"];
     const rows = validados.map((l) =>
       [l.company_name, l.sector, l.country, l.website, l.opportunity_score, l.validation_status, l.source_name, l.source_url, l.retrieved_at, l.contact_allowed]
