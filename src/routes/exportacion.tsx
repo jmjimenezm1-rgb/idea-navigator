@@ -40,23 +40,6 @@ function Exportacion() {
     }
   };
 
-  const exportarLocal = () => {
-    const header = ["empresa", "sector", "pais", "web", "score", "estado", "fuente", "url_origen", "fecha", "apto_contacto"];
-    const rows = validados.map((l) =>
-      [l.company_name, l.sector, l.country, l.website, l.opportunity_score, l.validation_status, l.source_name, l.source_url, l.retrieved_at, l.contact_allowed]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(","),
-    );
-    const csv = [header.join(","), ...rows].join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "leads-validados-demo.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("CSV de leads validados descargado (datos demo)");
-  };
-
   return (
     <AppShell title="Exportación de leads" subtitle="Solo se exportan leads con base válida para contacto">
       <div className="space-y-4">
