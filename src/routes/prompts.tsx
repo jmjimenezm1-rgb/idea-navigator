@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Pill } from "@/components/StatusBadges";
 import { Card, CardContent } from "@/components/ui/card";
-import { aiPrompts } from "@/lib/demo-data";
+import { useQuery } from "@tanstack/react-query";
+import { promptsQuery } from "@/lib/marketing-queries";
 
 export const Route = createFileRoute("/prompts")({
   head: () => ({

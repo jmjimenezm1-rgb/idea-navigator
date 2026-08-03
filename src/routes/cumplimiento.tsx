@@ -5,7 +5,9 @@ import { Pill, RiskBadge, StatusBadge, TriBadge } from "@/components/StatusBadge
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { potentialLeads, roles } from "@/lib/demo-data";
+import { useQuery } from "@tanstack/react-query";
+import { roles } from "@/lib/demo-data";
+import { leadsQuery } from "@/lib/marketing-queries";
 
 export const Route = createFileRoute("/cumplimiento")({
   head: () => ({

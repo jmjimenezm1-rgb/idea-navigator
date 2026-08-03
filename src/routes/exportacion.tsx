@@ -4,7 +4,9 @@ import { AppShell } from "@/components/AppShell";
 import { Pill } from "@/components/StatusBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { potentialLeads } from "@/lib/demo-data";
+import { useQuery } from "@tanstack/react-query";
+import { leadsQuery } from "@/lib/marketing-queries";
+import { exportEligibleLeads } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/exportacion")({
   head: () => ({
