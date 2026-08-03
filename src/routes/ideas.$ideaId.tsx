@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getAnalysisByIdea, getIdea, potentialLeads } from "@/lib/demo-data";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
+import { ideaDetailQuery, leadsQuery } from "@/lib/marketing-queries";
 
 export const Route = createFileRoute("/ideas/$ideaId")({
-  loader: ({ params }) => {
-    const idea = getIdea(params.ideaId);
-    if (!idea) throw notFound();
-    return { ideaName: idea.name };
+  loader: async ({ context, params }) => {
+    const detail = await context.queryClient.ensureQueryData(ideaDetailQuery(params.ideaId));
+    if (!detail.idea) throw notFound();
+    return { ideaName: detail.idea.name };
   },
   head: ({ loaderData }) => {
     const title = loaderData ? `${loaderData.ideaName} · Análisis de viabilidad` : "Análisis de viabilidad";
@@ -68,9 +69,11 @@ function List({ title, items }: { title: string; items: string[] }) {
 
 function AnalisisViabilidad() {
   const { ideaId } = Route.useParams();
-  const idea = getIdea(ideaId)!;
-  const analysis = getAnalysisByIdea(ideaId);
-  const leads = potentialLeads.filter((l) => l.business_idea_id === ideaId);
+  const { data: detail } = useSuspenseQuery(ideaDetailQuery(ideaId));
+  const { data: allLeads = [] } = useQuery(leadsQuery);
+  const idea = detail.idea!;
+  const analysis = detail.analysis;
+  const leads = allLeads.filter((l) => l.business_idea_id === ideaId);
 
   if (!analysis) {
     return (
