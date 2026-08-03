@@ -4,6 +4,7 @@ import type { AiDraft, AiPrompt, BusinessIdea, DataSource, PotentialLead, Viabil
 import {
   getIdeaDetail,
   getLeadDetail,
+  listAnalyses,
   listIdeas,
   listLeads,
   listPrompts,
@@ -59,4 +60,9 @@ export const promptsQuery = queryOptions({
 export const sourcesQuery = queryOptions({
   queryKey: ["sources"],
   queryFn: async () => (await listSources()) as unknown as DataSource[],
+});
+
+export const analysesQuery = queryOptions({
+  queryKey: ["analyses"],
+  queryFn: async () => (await listAnalyses()) as unknown as ViabilityAnalysis[],
 });

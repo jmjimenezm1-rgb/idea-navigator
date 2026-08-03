@@ -423,3 +423,10 @@ export const exportEligibleLeads = createServerFn({ method: "POST" }).handler(as
 
   return { csv: [header.join(","), ...rows].join("\n"), count: rows.length };
 });
+
+export const listAnalyses = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("./marketing.server");
+  const { data, error } = await supabaseAdmin.from("viability_analyses").select("id, data").order("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({ ...(row.data as Record<string, unknown>), id: row.id }));
+});
