@@ -14,7 +14,260 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_drafts: {
+        Row: {
+          business_idea_id: string
+          channel: string
+          created_at: string
+          data: Json
+          id: string
+          potential_lead_id: string
+        }
+        Insert: {
+          business_idea_id?: string
+          channel?: string
+          created_at?: string
+          data?: Json
+          id: string
+          potential_lead_id: string
+        }
+        Update: {
+          business_idea_id?: string
+          channel?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          potential_lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_drafts_potential_lead_id_fkey"
+            columns: ["potential_lead_id"]
+            isOneToOne: false
+            referencedRelation: "potential_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_prompts: {
+        Row: {
+          categoria: string
+          created_at: string
+          data: Json
+          estado: string
+          id: string
+          modelo: string
+          nombre: string
+          version: string
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data?: Json
+          estado?: string
+          id: string
+          modelo?: string
+          nombre: string
+          version?: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data?: Json
+          estado?: string
+          id?: string
+          modelo?: string
+          nombre?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      business_ideas: {
+        Row: {
+          created_at: string
+          created_by: string
+          data: Json
+          id: string
+          name: string
+          sector: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          data?: Json
+          id: string
+          name: string
+          sector?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data?: Json
+          id?: string
+          name?: string
+          sector?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      data_sources: {
+        Row: {
+          created_at: string
+          data: Json
+          enabled: boolean
+          id: string
+          name: string
+          status: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          enabled?: boolean
+          id: string
+          name: string
+          status?: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          enabled?: boolean
+          id?: string
+          name?: string
+          status?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      lead_events: {
+        Row: {
+          action: string
+          actor: string
+          created_at: string
+          id: string
+          new_status: string
+          potential_lead_id: string
+          previous_status: string
+        }
+        Insert: {
+          action: string
+          actor?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          potential_lead_id: string
+          previous_status?: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          potential_lead_id?: string
+          previous_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_events_potential_lead_id_fkey"
+            columns: ["potential_lead_id"]
+            isOneToOne: false
+            referencedRelation: "potential_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      potential_leads: {
+        Row: {
+          business_idea_id: string
+          company_name: string
+          contact_allowed: string
+          country: string
+          created_at: string
+          data: Json
+          id: string
+          opportunity_score: number
+          risk_level: string
+          sector: string
+          validation_status: string
+        }
+        Insert: {
+          business_idea_id: string
+          company_name: string
+          contact_allowed?: string
+          country?: string
+          created_at?: string
+          data?: Json
+          id: string
+          opportunity_score?: number
+          risk_level?: string
+          sector?: string
+          validation_status?: string
+        }
+        Update: {
+          business_idea_id?: string
+          company_name?: string
+          contact_allowed?: string
+          country?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          opportunity_score?: number
+          risk_level?: string
+          sector?: string
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "potential_leads_business_idea_id_fkey"
+            columns: ["business_idea_id"]
+            isOneToOne: false
+            referencedRelation: "business_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viability_analyses: {
+        Row: {
+          ai_model: string
+          business_idea_id: string
+          created_at: string
+          data: Json
+          id: string
+          prompt_version: string
+          viability_score: number
+        }
+        Insert: {
+          ai_model?: string
+          business_idea_id: string
+          created_at?: string
+          data?: Json
+          id: string
+          prompt_version?: string
+          viability_score?: number
+        }
+        Update: {
+          ai_model?: string
+          business_idea_id?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          prompt_version?: string
+          viability_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viability_analyses_business_idea_id_fkey"
+            columns: ["business_idea_id"]
+            isOneToOne: false
+            referencedRelation: "business_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
