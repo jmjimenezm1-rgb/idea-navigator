@@ -67,7 +67,9 @@ function Kpi({ label, value, hint, tone }: { label: string; value: number | stri
 }
 
 function Dashboard() {
-  const leads = potentialLeads;
+  const { data: leads = [] } = useQuery(leadsQuery);
+  const { data: businessIdeas = [] } = useQuery(ideasQuery);
+  const { data: viabilityAnalyses = [] } = useQuery(analysesQuery);
   const validated = leads.filter((l) => ["Validado", "Consentimiento obtenido", "Convertido en cliente"].includes(l.validation_status));
   const pending = leads.filter((l) => l.validation_status.startsWith("Pendiente"));
   const notAllowed = leads.filter((l) => l.contact_allowed === "no");
