@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Save, Search, Sparkles } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+import { createIdeaWithAnalysis } from "@/lib/marketing.functions";
 
 import { AppShell } from "@/components/AppShell";
 import { Pill } from "@/components/StatusBadges";
@@ -43,10 +46,42 @@ function Field({ label, children, hint }: { label: string; children: React.React
 
 function NuevaExploracion() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [confidence, setConfidence] = useState([60]);
   const [maxResults, setMaxResults] = useState([50]);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [problem, setProblem] = useState("");
+  const [customer, setCustomer] = useState("");
+  const [sector, setSector] = useState("");
+  const [geography, setGeography] = useState("");
+  const [constraints, setConstraints] = useState("");
+  const [competitors, setCompetitors] = useState("");
+
+  const createIdea = useMutation({
+    mutationFn: () =>
+      createIdeaWithAnalysis({
+        data: {
+          name,
+          description,
+          problem_solved: problem,
+          target_customer: customer,
+          sector,
+          geography,
+          legal_constraints: constraints,
+          competitors,
+        },
+      }),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["ideas"] });
+      void queryClient.invalidateQueries({ queryKey: ["analyses"] });
+      if (result.aiError) toast.error(`Idea guardada, pero el análisis IA falló: ${result.aiError}`);
+      else toast.success("Análisis de viabilidad generado con IA");
+      void navigate({ to: "/ideas/$ideaId", params: { ideaId: result.ideaId } });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const restrictions = [
     "Excluir empresas competidoras",
@@ -100,12 +135,12 @@ function NuevaExploracion() {
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="Descripción del producto o servicio">
-                    <Textarea rows={3} placeholder="Qué hace y cómo funciona" />
+                    <Textarea rows={3} placeholder="Qué hace y cómo funciona" value={description} onChange={(e) => setDescription(e.target.value)} />
                   </Field>
                 </div>
                 <div className="sm:col-span-2">
                   <Field label="Problema que resuelve">
-                    <Textarea rows={2} placeholder="Dolor concreto del cliente" />
+                    <Textarea rows={2} placeholder="Dolor concreto del cliente" value={problem} onChange={(e) => setProblem(e.target.value)} />
                   </Field>
                 </div>
                 <Field label="Beneficio principal">
@@ -120,13 +155,13 @@ function NuevaExploracion() {
             {step === 1 && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Tipo de cliente">
-                  <Input placeholder="Ej. Empresa industrial con planta propia" />
+                  <Input placeholder="Ej. Empresa industrial con planta propia" value={customer} onChange={(e) => setCustomer(e.target.value)} />
                 </Field>
                 <Field label="Sector o sectores objetivo">
-                  <Input placeholder="Ej. Automoción, alimentación" />
+                  <Input placeholder="Ej. Automoción, alimentación" value={sector} onChange={(e) => setSector(e.target.value)} />
                 </Field>
                 <Field label="País o zona geográfica">
-                  <Input placeholder="Ej. España, Portugal" />
+                  <Input placeholder="Ej. España, Portugal" value={geography} onChange={(e) => setGeography(e.target.value)} />
                 </Field>
                 <Field label="Tamaño de empresa">
                   <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -228,10 +263,10 @@ function NuevaExploracion() {
                   </label>
                 ))}
                 <Field label="Restricciones legales o comerciales adicionales">
-                  <Textarea rows={2} placeholder="Ej. No contactar por WhatsApp sin opt-in específico" />
+                  <Textarea rows={2} placeholder="Ej. No contactar por WhatsApp sin opt-in específico" value={constraints} onChange={(e) => setConstraints(e.target.value)} />
                 </Field>
                 <Field label="Competidores conocidos">
-                  <Input placeholder="Ej. Senseye, Augury" />
+                  <Input placeholder="Ej. Senseye, Augury" value={competitors} onChange={(e) => setCompetitors(e.target.value)} />
                 </Field>
               </div>
             )}
@@ -246,26 +281,19 @@ function NuevaExploracion() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Pill tone="info">Modo activo: datos simulados</Pill>
+                  <Pill tone="info">Modo activo: análisis IA real</Pill>
                   <Pill tone="neutral">Prompt: Analisis_Viabilidad_Idea v1.2</Pill>
-                  <Pill tone="neutral">Modelo: google/gemini-3.6-flash (simulado)</Pill>
+                  <Pill tone="neutral">Modelo: google/gemini-3.6-flash</Pill>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => {
-                      toast.success("Análisis de viabilidad generado (demo)");
-                      navigate({ to: "/ideas/$ideaId", params: { ideaId: "idea-1" } });
-                    }}
+                    disabled={createIdea.isPending || !name.trim() || !description.trim()}
+                    onClick={() => createIdea.mutate()}
                   >
-                    <Sparkles className="size-4" /> Analizar viabilidad
+                    {createIdea.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                    Analizar viabilidad
                   </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      toast.success("Búsqueda simulada completada: 30 leads demo");
-                      navigate({ to: "/leads" });
-                    }}
-                  >
+                  <Button variant="secondary" onClick={() => void navigate({ to: "/leads" })}>
                     <Search className="size-4" /> Buscar clientes potenciales
                   </Button>
                   <Button variant="outline" onClick={() => toast("Borrador guardado (demo)")}>
