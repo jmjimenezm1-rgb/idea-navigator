@@ -85,7 +85,10 @@ function LeadDetail() {
   const validateMutation = useMutation({
     mutationFn: () => validateLeadWithAi({ data: { leadId } }),
     onSuccess: (result) => {
-      if (!result.ok) return toast.error(result.error);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success(`Validación IA: ${result.result.validation_status}`);
       invalidate();
     },
@@ -95,7 +98,10 @@ function LeadDetail() {
   const draftMutation = useMutation({
     mutationFn: (channel: "Email" | "LinkedIn" | "Llamada") => generateDraft({ data: { leadId, channel } }),
     onSuccess: (result) => {
-      if (!result.ok) return toast.error(result.error);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Borrador generado con IA. Requiere revisión humana.");
       invalidate();
     },
