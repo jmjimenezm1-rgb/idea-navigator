@@ -637,7 +637,7 @@ export const runComplianceRules = createServerFn({ method: "POST" }).handler(asy
       risk = "alto";
       status = "Bloqueado por cumplimiento";
     }
-    whatsapp = lead["consent_available"] === "sí" ? "pendiente" : "no";
+    whatsapp = lead["whatsapp_optin"] === true ? "sí" : lead["consent_available"] === "sí" ? "pendiente" : "no";
     if (whatsapp !== "sí") reasons.push("Sin opt-in específico de WhatsApp → no apto para WhatsApp marketing.");
 
     const personal = (lead["contacts"] ?? []).some(
