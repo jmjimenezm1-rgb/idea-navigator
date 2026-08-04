@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Pill, RiskBadge, StatusBadge, TriBadge } from "@/components/StatusBadges";
@@ -8,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuery } from "@tanstack/react-query";
 import { roles } from "@/lib/demo-data";
 import { leadsQuery } from "@/lib/marketing-queries";
+import { runComplianceRules, updateLeadStatus } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/cumplimiento")({
   head: () => ({
@@ -26,13 +29,43 @@ export const Route = createFileRoute("/cumplimiento")({
 });
 
 function Cumplimiento() {
+  const queryClient = useQueryClient();
   const { data: potentialLeads = [] } = useQuery(leadsQuery);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["leads"] });
+
+  const rulesMutation = useMutation({
+    mutationFn: () => runComplianceRules(),
+    onSuccess: (r) => {
+      toast.success(`Validación ejecutada sobre ${r.evaluated} leads · ${r.changed} actualizados`);
+      void invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (leadId: string) => updateLeadStatus({ data: { leadId, validation_status: "Validado" } }),
+    onSuccess: () => {
+      toast.success("Lead marcado como validado");
+      void invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const sinFuente = potentialLeads.filter((l) => !l.source_url);
   const pendientes = potentialLeads.filter((l) => l.contact_allowed === "pendiente");
   const bloqueados = potentialLeads.filter((l) => l.contact_allowed === "no");
 
   return (
-    <AppShell title="Validación de datos y revisión legal" subtitle="Trazabilidad de fuentes, base jurídica y consentimiento">
+    <AppShell
+      title="Validación de datos y revisión legal"
+      subtitle="Trazabilidad de fuentes, base jurídica y consentimiento"
+      actions={
+        <Button disabled={rulesMutation.isPending} onClick={() => rulesMutation.mutate()}>
+          {rulesMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+          Ejecutar validaciones legales
+        </Button>
+      }
+    >
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Sin fuente trazable</p><p className="font-display text-2xl font-semibold text-destructive">{sinFuente.length}</p></CardContent></Card>
@@ -88,7 +121,7 @@ function Cumplimiento() {
                     <TableCell><StatusBadge status={l.validation_status} /></TableCell>
                     <TableCell className="space-x-1 text-right whitespace-nowrap">
                       <Button size="sm" variant="ghost" asChild><Link to="/leads/$leadId" params={{ leadId: l.id }}>Ver</Link></Button>
-                      <Button size="sm" variant="outline" onClick={() => toast.success("Lead marcado como apto (demo)")}>Apto</Button>
+                      <Button size="sm" variant="outline" disabled={statusMutation.isPending} onClick={() => statusMutation.mutate(l.id)}>Apto</Button>
                     </TableCell>
                   </TableRow>
                 ))}
