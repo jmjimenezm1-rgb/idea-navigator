@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { validationStatuses } from "@/lib/demo-data";
 import { ideasQuery, leadDetailQuery } from "@/lib/marketing-queries";
-import { generateDraft, updateLeadStatus, validateLeadWithAi } from "@/lib/marketing.functions";
+import { enrichLead, generateDraft, updateLeadStatus, validateLeadWithAi } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/leads/$leadId")({
   loader: async ({ context, params }) => {
@@ -108,6 +108,19 @@ function LeadDetail() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const enrichMutation = useMutation({
+    mutationFn: () => enrichLead({ data: { leadId } }),
+    onSuccess: (result) => {
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Ficha enriquecida con IA a partir de datos públicos trazables.");
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const blocked = lead.contact_allowed !== "sí";
 
   return (
@@ -165,7 +178,8 @@ function LeadDetail() {
             {validateMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldAlert className="size-4" />}
             Validar con IA
           </Button>
-          <Button size="sm" variant="outline" onClick={() => toast("Enriquecimiento no disponible: conector no configurado")}>
+          <Button size="sm" variant="outline" disabled={enrichMutation.isPending} onClick={() => enrichMutation.mutate()}>
+            {enrichMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
             Enriquecer datos
           </Button>
         </div>
