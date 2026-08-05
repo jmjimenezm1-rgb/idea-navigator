@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { sourcesQuery } from "@/lib/marketing-queries";
-import { updateDataSource } from "@/lib/marketing.functions";
+import { getConnectorStatus, updateDataSource } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/fuentes")({
   head: () => ({
@@ -51,6 +51,10 @@ type SourceRow = {
 function Fuentes() {
   const queryClient = useQueryClient();
   const { data: dataSources = [] } = useQuery(sourcesQuery);
+  const { data: connectors } = useQuery({
+    queryKey: ["connector-status"],
+    queryFn: () => getConnectorStatus(),
+  });
   const [editing, setEditing] = useState<SourceRow | null>(null);
   const [form, setForm] = useState<Required<SourceConfig> & { usage_policy: string }>({
     base_url: "",
@@ -91,7 +95,26 @@ function Fuentes() {
 
   return (
     <AppShell title="Fuentes de datos" subtitle="Activación, credenciales, límites de frecuencia y política de uso">
+      <Card className="mb-4">
+        <CardContent className="flex flex-wrap items-center gap-3 p-4">
+          <p className="text-sm font-medium">Conectores del backend</p>
+          <Pill tone={connectors?.firecrawl.configured ? "success" : "warning"}>
+            Extracción web: {connectors?.firecrawl.label ?? "comprobando…"}
+          </Pill>
+          <Pill tone={connectors?.aiGateway.configured ? "success" : "warning"}>
+            Motor de IA: {connectors?.aiGateway.configured ? "Conectado" : "No conectado"}
+          </Pill>
+          {connectors && !connectors.firecrawl.configured && (
+            <p className="w-full text-xs text-muted-foreground">
+              Sin el conector de extracción web, el enriquecimiento de leads funciona solo por inferencia sobre datos
+              internos y se marca con confianza baja.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-3 lg:grid-cols-2">
+
         {(dataSources as unknown as SourceRow[]).map((s) => (
           <Card key={s.id}>
             <CardContent className="space-y-2 p-4">

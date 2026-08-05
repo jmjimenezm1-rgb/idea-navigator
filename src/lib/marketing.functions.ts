@@ -447,9 +447,14 @@ export const enrichLead = createServerFn({ method: "POST" })
     const lead = leadRow.data as Record<string, any>;
 
     const sources = await supabaseAdmin.from("data_sources").select("id, data").eq("enabled", true);
-    const enabledSources = (sources.data ?? [])
-      .map((s) => (s.data as Record<string, any>)["name"] as string)
-      .filter(Boolean);
+    const enabledRows: Record<string, any>[] = (sources.data ?? []).map((s) => ({
+      ...(s.data as Record<string, any>),
+      id: s.id,
+    }));
+    const enabledSources = enabledRows.map((s) => s["name"] as string).filter(Boolean);
+    const webSourceEnabled = enabledRows.some((s) =>
+      /firecrawl|web|scrap/i.test(`${s["id"] ?? ""} ${s["name"] ?? ""} ${s["type"] ?? ""}`),
+    );
 
     const ideaRow = await supabaseAdmin
       .from("business_ideas")
@@ -457,6 +462,31 @@ export const enrichLead = createServerFn({ method: "POST" })
       .eq("id", leadRow.business_idea_id)
       .maybeSingle();
     const idea = (ideaRow.data?.data ?? {}) as Record<string, any>;
+
+    // Recuperación real de contenido corporativo público (si la fuente web está habilitada).
+    const { scrapeCorporateSite, firecrawlStatus } = await import("./web-retrieval.server");
+    let webContext = "";
+    let webEvidence: Record<string, string> | null = null;
+    let retrievalNote = "";
+    if (lead["website"] && webSourceEnabled && firecrawlStatus().configured) {
+      const scraped = await scrapeCorporateSite(String(lead["website"]), { maxChars: 6000 });
+      if (scraped.ok) {
+        webContext = `\n\nContenido público extraído de la web corporativa (${scraped.sourceUrl}, ${scraped.retrievedAt}):\n"""${scraped.markdown}"""`;
+        webEvidence = {
+          source_url: scraped.sourceUrl,
+          provider: scraped.provider,
+          retrieved_at: scraped.retrievedAt,
+          title: scraped.title ?? "",
+        };
+      } else {
+        retrievalNote = `Extracción web no disponible: ${scraped.error}`;
+      }
+    } else if (lead["website"] && !firecrawlStatus().configured) {
+      retrievalNote = "Extracción web desactivada: conector Firecrawl no conectado.";
+    } else if (lead["website"] && !webSourceEnabled) {
+      retrievalNote = "Extracción web desactivada: fuente web no habilitada en Fuentes de datos.";
+    }
+
 
     const result = await callAiJson<{
       company_description: string;
@@ -481,10 +511,10 @@ Descripción actual: ${lead["company_description"] ?? "sin datos"}.
 Necesidad detectada actual: ${lead["detected_need"] ?? "sin datos"}.
 Fuente del dato: ${lead["source_name"] ?? ""} (${lead["source_url"] ?? ""}), obtenido el ${lead["retrieved_at"] ?? ""}.
 Fuentes de datos habilitadas en el sistema: ${enabledSources.join(", ") || "solo datos internos"}.
-Idea/producto a encajar: ${idea["name"] ?? ""}. ${idea["description"] ?? ""} Cliente objetivo: ${idea["target_customer"] ?? ""}.
+Idea/producto a encajar: ${idea["name"] ?? ""}. ${idea["description"] ?? ""} Cliente objetivo: ${idea["target_customer"] ?? ""}.${webContext}
 
 Devuelve JSON: {"company_description":string,"detected_need":string,"fit_reason":string,"fit_level":"Alto"|"Medio"|"Bajo","opportunity_score":number,"why_fits":string,"probable_need":string,"objections":string[],"next_action":string,"enrichment_notes":string,"confidence_level":"alta"|"media"|"baja"}
-opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido y qué queda sin verificar.`,
+opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido y qué queda sin verificar${webEvidence ? ", citando la web corporativa como fuente cuando proceda" : " (no hay extracción web disponible en esta ejecución)"}.`,
     });
 
     if (!result.ok) return { ok: false as const, error: result.error };
@@ -510,10 +540,13 @@ opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido 
       enrichment: {
         enriched_at: new Date().toISOString(),
         model: result.model,
-        confidence_level: v.confidence_level ?? "media",
-        notes: v.enrichment_notes ?? "",
+        confidence_level: webEvidence ? (v.confidence_level ?? "media") : "baja",
+        notes: [v.enrichment_notes ?? "", retrievalNote].filter(Boolean).join(" · "),
         sources_used: enabledSources,
+        web_evidence: webEvidence,
+        retrieval_mode: webEvidence ? "web pública verificada" : "solo inferencia sobre datos internos",
       },
+
     };
 
     const saved = await supabaseAdmin
@@ -524,14 +557,41 @@ opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido 
 
     await supabaseAdmin.from("lead_events").insert({
       potential_lead_id: data.leadId,
-      action: `Enriquecimiento IA (confianza ${v.confidence_level ?? "media"})`,
+      action: webEvidence
+        ? `Enriquecimiento con extracción web pública (${webEvidence["source_url"]})`
+        : `Enriquecimiento IA sin extracción web${retrievalNote ? ` — ${retrievalNote}` : ""}`,
       previous_status: leadRow.validation_status,
       new_status: leadRow.validation_status,
       actor: "IA · Enriquecedor",
     });
 
-    return { ok: true as const, enrichment: updated["enrichment"], score };
+    return {
+      ok: true as const,
+      enrichment: updated["enrichment"],
+      score,
+      webEvidence,
+      retrievalNote,
+    };
   });
+
+/** Estado de los conectores externos disponibles para la recuperación de datos. */
+export const getConnectorStatus = createServerFn({ method: "GET" }).handler(async () => {
+  const { firecrawlStatus } = await import("./web-retrieval.server");
+  const fc = firecrawlStatus();
+  return {
+    firecrawl: {
+      configured: fc.configured,
+      mode: fc.mode,
+      label: fc.configured
+        ? fc.mode === "gateway"
+          ? "Conectado (pasarela de conectores)"
+          : "Conectado (API directa)"
+        : "No conectado",
+    },
+    aiGateway: { configured: !!process.env["LOVABLE_API_KEY"] },
+  };
+});
+
 
 /** Actualiza la configuración de una fuente de datos (activación, credenciales, límites y política). */
 export const updateDataSource = createServerFn({ method: "POST" })
