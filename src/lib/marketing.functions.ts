@@ -511,10 +511,10 @@ Descripción actual: ${lead["company_description"] ?? "sin datos"}.
 Necesidad detectada actual: ${lead["detected_need"] ?? "sin datos"}.
 Fuente del dato: ${lead["source_name"] ?? ""} (${lead["source_url"] ?? ""}), obtenido el ${lead["retrieved_at"] ?? ""}.
 Fuentes de datos habilitadas en el sistema: ${enabledSources.join(", ") || "solo datos internos"}.
-Idea/producto a encajar: ${idea["name"] ?? ""}. ${idea["description"] ?? ""} Cliente objetivo: ${idea["target_customer"] ?? ""}.
+Idea/producto a encajar: ${idea["name"] ?? ""}. ${idea["description"] ?? ""} Cliente objetivo: ${idea["target_customer"] ?? ""}.${webContext}
 
 Devuelve JSON: {"company_description":string,"detected_need":string,"fit_reason":string,"fit_level":"Alto"|"Medio"|"Bajo","opportunity_score":number,"why_fits":string,"probable_need":string,"objections":string[],"next_action":string,"enrichment_notes":string,"confidence_level":"alta"|"media"|"baja"}
-opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido y qué queda sin verificar.`,
+opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido y qué queda sin verificar${webEvidence ? ", citando la web corporativa como fuente cuando proceda" : " (no hay extracción web disponible en esta ejecución)"}.`,
     });
 
     if (!result.ok) return { ok: false as const, error: result.error };
