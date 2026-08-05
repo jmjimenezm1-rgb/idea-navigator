@@ -540,10 +540,13 @@ opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido 
       enrichment: {
         enriched_at: new Date().toISOString(),
         model: result.model,
-        confidence_level: v.confidence_level ?? "media",
-        notes: v.enrichment_notes ?? "",
+        confidence_level: webEvidence ? (v.confidence_level ?? "media") : "baja",
+        notes: [v.enrichment_notes ?? "", retrievalNote].filter(Boolean).join(" · "),
         sources_used: enabledSources,
+        web_evidence: webEvidence,
+        retrieval_mode: webEvidence ? "web pública verificada" : "solo inferencia sobre datos internos",
       },
+
     };
 
     const saved = await supabaseAdmin
