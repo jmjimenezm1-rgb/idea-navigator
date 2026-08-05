@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { sourcesQuery } from "@/lib/marketing-queries";
-import { updateDataSource } from "@/lib/marketing.functions";
+import { getConnectorStatus, updateDataSource } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/fuentes")({
   head: () => ({
