@@ -2,7 +2,7 @@
 // Soporta conexión directa (clave fc-*) y pasarela de conectores (clave lovc_*).
 
 export type WebFetchResult =
-  | { ok: true; markdown: string; sourceUrl: string; title?: string; provider: string; retrievedAt: string }
+  | { ok: true; markdown: string; sourceUrl: string; title?: string | undefined; provider: string; retrievedAt: string }
   | { ok: false; error: string };
 
 export function firecrawlStatus() {
