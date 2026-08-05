@@ -51,6 +51,10 @@ type SourceRow = {
 function Fuentes() {
   const queryClient = useQueryClient();
   const { data: dataSources = [] } = useQuery(sourcesQuery);
+  const { data: connectors } = useQuery({
+    queryKey: ["connector-status"],
+    queryFn: () => getConnectorStatus(),
+  });
   const [editing, setEditing] = useState<SourceRow | null>(null);
   const [form, setForm] = useState<Required<SourceConfig> & { usage_policy: string }>({
     base_url: "",
