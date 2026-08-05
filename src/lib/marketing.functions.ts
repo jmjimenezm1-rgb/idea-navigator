@@ -447,7 +447,10 @@ export const enrichLead = createServerFn({ method: "POST" })
     const lead = leadRow.data as Record<string, any>;
 
     const sources = await supabaseAdmin.from("data_sources").select("id, data").eq("enabled", true);
-    const enabledRows = (sources.data ?? []).map((s) => ({ id: s.id, ...(s.data as Record<string, any>) }));
+    const enabledRows: Record<string, any>[] = (sources.data ?? []).map((s) => ({
+      ...(s.data as Record<string, any>),
+      id: s.id,
+    }));
     const enabledSources = enabledRows.map((s) => s["name"] as string).filter(Boolean);
     const webSourceEnabled = enabledRows.some((s) =>
       /firecrawl|web|scrap/i.test(`${s["id"] ?? ""} ${s["name"] ?? ""} ${s["type"] ?? ""}`),
