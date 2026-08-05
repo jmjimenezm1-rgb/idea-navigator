@@ -557,14 +557,41 @@ opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido 
 
     await supabaseAdmin.from("lead_events").insert({
       potential_lead_id: data.leadId,
-      action: `Enriquecimiento IA (confianza ${v.confidence_level ?? "media"})`,
+      action: webEvidence
+        ? `Enriquecimiento con extracción web pública (${webEvidence["source_url"]})`
+        : `Enriquecimiento IA sin extracción web${retrievalNote ? ` — ${retrievalNote}` : ""}`,
       previous_status: leadRow.validation_status,
       new_status: leadRow.validation_status,
       actor: "IA · Enriquecedor",
     });
 
-    return { ok: true as const, enrichment: updated["enrichment"], score };
+    return {
+      ok: true as const,
+      enrichment: updated["enrichment"],
+      score,
+      webEvidence,
+      retrievalNote,
+    };
   });
+
+/** Estado de los conectores externos disponibles para la recuperación de datos. */
+export const getConnectorStatus = createServerFn({ method: "GET" }).handler(async () => {
+  const { firecrawlStatus } = await import("./web-retrieval.server");
+  const fc = firecrawlStatus();
+  return {
+    firecrawl: {
+      configured: fc.configured,
+      mode: fc.mode,
+      label: fc.configured
+        ? fc.mode === "gateway"
+          ? "Conectado (pasarela de conectores)"
+          : "Conectado (API directa)"
+        : "No conectado",
+    },
+    aiGateway: { configured: !!process.env["LOVABLE_API_KEY"] },
+  };
+});
+
 
 /** Actualiza la configuración de una fuente de datos (activación, credenciales, límites y política). */
 export const updateDataSource = createServerFn({ method: "POST" })
