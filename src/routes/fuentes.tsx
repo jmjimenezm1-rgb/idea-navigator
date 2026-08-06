@@ -76,6 +76,7 @@ function Fuentes() {
       toast.success("Configuración de la fuente guardada");
       setEditing(null);
       void queryClient.invalidateQueries({ queryKey: ["sources"] });
+      void queryClient.invalidateQueries({ queryKey: ["connector-status"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
