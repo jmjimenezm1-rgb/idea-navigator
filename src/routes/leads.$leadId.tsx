@@ -115,7 +115,11 @@ function LeadDetail() {
         toast.error(result.error);
         return;
       }
-      toast.success("Ficha enriquecida con IA a partir de datos públicos trazables.");
+      toast.success(
+        result.webEvidence
+          ? `Ficha enriquecida con contenido público de ${result.webEvidence["source_url"]}`
+          : `Enriquecimiento sin extracción web${result.retrievalNote ? `: ${result.retrievalNote}` : ""}`,
+      );
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),
