@@ -988,3 +988,242 @@ La plantilla debe usar variables del tipo {{empresa}}, {{sector}}, {{cargo}}, {{
     if (!result.ok) return { ok: false as const, error: result.error };
     return { ok: true as const, suggestion: result.value };
   });
+
+/**
+ * Búsqueda y alta de nuevos clientes potenciales a partir de fuentes públicas.
+ * Usa la fuente de extracción dada de alta en "Fuentes de datos" para localizar
+ * empresas reales y la IA solo para estructurar y puntuar el encaje.
+ */
+export const discoverLeads = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        ideaId: z.string().min(1),
+        sector: z.string().trim().max(120).optional(),
+        country: z.string().trim().max(80).optional(),
+        companySize: z.string().trim().max(60).optional(),
+        keywords: z.string().trim().max(300).optional(),
+        limit: z.number().int().min(1).max(10).default(5),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin, callAiJson } = await import("./marketing.server");
+
+    const ideaRow = await supabaseAdmin
+      .from("business_ideas")
+      .select("id, name, sector, data")
+      .eq("id", data.ideaId)
+      .maybeSingle();
+    if (!ideaRow.data) throw new Error("Idea de negocio no encontrada.");
+    const idea = (ideaRow.data.data ?? {}) as Record<string, any>;
+
+    const sector = data.sector || String(idea["sector"] ?? ideaRow.data.sector ?? "");
+    const country = data.country || String(idea["target_market"] ?? "España");
+
+    // 1) Recuperación pública real con el conector configurado.
+    const { searchWeb, loadWebConnector } = await import("./web-retrieval.server");
+    const connector = await loadWebConnector();
+    const query = [
+      "empresas",
+      sector,
+      data.companySize ?? "",
+      country,
+      data.keywords ?? "",
+      "web oficial",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    let evidence = "";
+    let hits: { title: string; url: string; description: string }[] = [];
+    let provider = "";
+    let retrievedAt = new Date().toISOString();
+    let retrievalNote = "";
+
+    if (!connector || !connector.enabled) {
+      retrievalNote = "Búsqueda web desactivada: no hay ninguna fuente de extracción habilitada.";
+    } else if (!connector.hasKey) {
+      retrievalNote = `Búsqueda web desactivada: falta el secreto ${connector.apiKeySecretName}.`;
+    } else {
+      const found = await searchWeb(query, { limit: Math.min(data.limit * 2, 20), connector });
+      if (found.ok) {
+        hits = found.hits;
+        provider = found.provider;
+        retrievedAt = found.retrievedAt;
+        evidence = hits
+          .map((h, i) => `${i + 1}. ${h.title} — ${h.url}\n${h.description}`)
+          .join("\n\n");
+      } else {
+        retrievalNote = `Búsqueda web no disponible: ${found.error}`;
+      }
+    }
+
+    if (!hits.length) {
+      return {
+        ok: false as const,
+        error:
+          retrievalNote ||
+          "No se han obtenido resultados públicos verificables; no se dan de alta leads sin fuente trazable.",
+      };
+    }
+
+    // 2) Estructuración con IA, sin inventar datos de contacto.
+    const result = await callAiJson<{
+      leads: {
+        company_name: string;
+        website: string;
+        source_index: number;
+        sector: string;
+        subsector: string;
+        country: string;
+        city: string;
+        company_size: string;
+        company_description: string;
+        detected_need: string;
+        fit_reason: string;
+        fit_level: string;
+        opportunity_score: number;
+        discard_reason?: string;
+      }[];
+    }>({
+      model: "google/gemini-3.6-flash",
+      system:
+        "Eres analista de prospección B2B en la UE. A partir de resultados de búsqueda web públicos, identificas EMPRESAS (nunca personas ni autónomos identificables) que encajan con una propuesta de valor. Prohibido inventar nombres de personas, emails, teléfonos o URLs que no aparezcan en los resultados. Descarta directorios, agregadores, medios, blogs y páginas que no sean la web de una empresa concreta. Escribe en español.",
+      user: `Idea/producto: ${ideaRow.data.name}. ${idea["description"] ?? ""}
+Cliente objetivo: ${idea["target_customer"] ?? ""}. Propuesta de valor: ${idea["value_proposition"] ?? ""}.
+Criterios de búsqueda: sector "${sector}", país "${country}", tamaño "${data.companySize ?? "cualquiera"}", palabras clave "${data.keywords ?? "-"}".
+
+Resultados de búsqueda pública (usa SOLO estos):
+"""
+${evidence}
+"""
+
+Devuelve como máximo ${data.limit} empresas válidas en JSON:
+{"leads":[{"company_name":string,"website":string,"source_index":number,"sector":string,"subsector":string,"country":string,"city":string,"company_size":string,"company_description":string,"detected_need":string,"fit_reason":string,"fit_level":"Alto"|"Medio"|"Bajo","opportunity_score":number}]}
+source_index es el número del resultado del que procede cada empresa. website debe ser exactamente la URL de ese resultado. opportunity_score de 0 a 100. Si un resultado no es una empresa concreta, omítelo.`,
+    });
+
+    if (!result.ok) return { ok: false as const, error: result.error };
+
+    const candidates = (result.value.leads ?? []).filter((l) => l.company_name && l.website).slice(0, data.limit);
+    if (!candidates.length) {
+      return { ok: false as const, error: "La búsqueda no ha localizado empresas concretas con fuente verificable." };
+    }
+
+    const existing = await supabaseAdmin.from("potential_leads").select("id, company_name, data");
+    const known = new Set(
+      (existing.data ?? []).map((r) =>
+        `${r.company_name ?? ""}`.trim().toLowerCase(),
+      ),
+    );
+
+    const nowIso = new Date().toISOString();
+    const today = nowIso.slice(0, 10);
+    const inserted: { id: string; company_name: string; opportunity_score: number }[] = [];
+    const skipped: string[] = [];
+
+    for (const c of candidates) {
+      const nameKey = c.company_name.trim().toLowerCase();
+      if (known.has(nameKey)) {
+        skipped.push(c.company_name);
+        continue;
+      }
+      known.add(nameKey);
+
+      const hit = hits[Math.max(0, Math.min(hits.length - 1, Number(c.source_index ?? 1) - 1))];
+      const id = `lead-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      const score = Number.isFinite(Number(c.opportunity_score))
+        ? Math.max(0, Math.min(100, Math.round(Number(c.opportunity_score))))
+        : 50;
+
+      const lead = {
+        id,
+        business_idea_id: data.ideaId,
+        company_name: c.company_name,
+        commercial_name: c.company_name,
+        sector: c.sector || sector,
+        subsector: c.subsector ?? "",
+        country: c.country || country,
+        city: c.city ?? "",
+        website: c.website || hit?.url || "",
+        linkedin_url: null,
+        company_description: c.company_description ?? "",
+        fit_reason: c.fit_reason ?? "",
+        detected_need: c.detected_need ?? "",
+        company_size: c.company_size || (data.companySize ?? "desconocido"),
+        customer_type: "Empresa",
+        fit_level: c.fit_level || "Medio",
+        opportunity_score: score,
+        source_name: connector?.name ?? "Búsqueda web pública",
+        source_url: hit?.url ?? c.website,
+        source_type: "Búsqueda web pública",
+        retrieved_at: today,
+        validation_status: "Nuevo",
+        legal_basis: "Interés legítimo (pendiente de verificación)",
+        purpose: "Prospección comercial B2B",
+        requires_consent: "pendiente",
+        consent_available: "no",
+        email_marketing_allowed: "pendiente",
+        whatsapp_marketing_allowed: "no",
+        contact_allowed: "pendiente",
+        risk_level: "medio",
+        legal_recommendation:
+          "Lead descubierto automáticamente: verificar datos de contacto corporativos y base jurídica antes de cualquier campaña.",
+        notes: `Descubierto mediante búsqueda web pública (${provider}) el ${today}.`,
+        contacts: [],
+        ai_analysis: {
+          why_fits: c.fit_reason ?? "",
+          probable_need: c.detected_need ?? "",
+          objections: [],
+          next_action: "Enriquecer con la web corporativa y validar legalmente.",
+        },
+        discovery: {
+          discovered_at: nowIso,
+          query,
+          provider,
+          source_url: hit?.url ?? "",
+          source_title: hit?.title ?? "",
+          retrieved_at: retrievedAt,
+          model: result.model,
+          confidence_level: "media",
+          source_id: connector?.id ?? "",
+        },
+        history: [],
+      };
+
+      const savedLead = await supabaseAdmin.from("potential_leads").insert({
+        id,
+        business_idea_id: data.ideaId,
+        company_name: c.company_name,
+        sector: lead.sector,
+        country: lead.country,
+        opportunity_score: score,
+        validation_status: "Nuevo",
+        contact_allowed: "pendiente",
+        risk_level: "medio",
+        data: lead,
+      });
+      if (savedLead.error) throw new Error(savedLead.error.message);
+
+      await supabaseAdmin.from("lead_events").insert({
+        potential_lead_id: id,
+        action: `Alta por búsqueda web pública (${hit?.url ?? ""})`,
+        previous_status: "",
+        new_status: "Nuevo",
+        actor: "IA · Buscador de leads",
+      });
+
+      inserted.push({ id, company_name: c.company_name, opportunity_score: score });
+    }
+
+    return {
+      ok: true as const,
+      created: inserted,
+      skipped,
+      query,
+      provider,
+      retrievalNote,
+      hitCount: hits.length,
+    };
+  });

@@ -215,3 +215,81 @@ export async function scrapeCorporateSite(
     retrievedAt: new Date().toISOString(),
   };
 }
+
+export type WebSearchHit = { title: string; url: string; description: string };
+export type WebSearchResult = { ok: true; hits: WebSearchHit[]; provider: string; retrievedAt: string } | { ok: false; error: string };
+
+/** Búsqueda web pública (directorios, webs corporativas) con la fuente configurada en "Fuentes de datos". */
+export async function searchWeb(
+  query: string,
+  opts: { limit?: number; connector: WebConnector },
+): Promise<WebSearchResult> {
+  const { connector } = opts;
+  const key = process.env[connector.apiKeySecretName];
+  if (!key) {
+    return { ok: false, error: `Conector "${connector.name}" sin credencial: falta el secreto ${connector.apiKeySecretName}.` };
+  }
+  if (!(await consumeRateLimit(connector))) {
+    return { ok: false, error: `Límite de ${connector.rateLimitPerMin} peticiones/minuto alcanzado en la fuente "${connector.name}".` };
+  }
+
+  const gateway = key.startsWith("lovc_");
+  let headers: Record<string, string>;
+  if (gateway) {
+    const lovableKey = process.env["LOVABLE_API_KEY"];
+    if (!lovableKey) return { ok: false, error: "Falta LOVABLE_API_KEY para la pasarela de conectores." };
+    headers = { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": key };
+  } else {
+    headers = { "Content-Type": "application/json", Authorization: `Bearer ${key}` };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${connector.baseUrl}/search`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ query, limit: Math.min(Math.max(opts.limit ?? 8, 1), 20) }),
+    });
+  } catch (e) {
+    return { ok: false, error: `No se pudo contactar con el proveedor de búsqueda: ${(e as Error).message}` };
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error(`[Firecrawl search] ${response.status}: ${text.slice(0, 500)}`);
+    return {
+      ok: false,
+      error:
+        response.status === 402
+          ? "Créditos del proveedor de búsqueda agotados."
+          : response.status === 401 || response.status === 403
+            ? `Credenciales no válidas para el endpoint configurado (${connector.baseUrl}).`
+            : `Error del proveedor de búsqueda (${response.status}).`,
+    };
+  }
+
+  const payload = (await response.json()) as {
+    data?: { web?: any[] } | any[];
+    web?: any[];
+  };
+  const raw: any[] = Array.isArray(payload.data)
+    ? payload.data
+    : ((payload.data as any)?.web ?? payload.web ?? []);
+
+  const hits: WebSearchHit[] = raw
+    .map((r) => ({
+      title: String(r?.title ?? ""),
+      url: String(r?.url ?? ""),
+      description: String(r?.description ?? r?.snippet ?? "").slice(0, 400),
+    }))
+    .filter((h) => h.url);
+
+  if (!hits.length) return { ok: false, error: "La búsqueda no devolvió resultados públicos utilizables." };
+
+  return {
+    ok: true,
+    hits,
+    provider: `${connector.name} · ${gateway ? "pasarela de conectores" : "API directa"}`,
+    retrievedAt: new Date().toISOString(),
+  };
+}
