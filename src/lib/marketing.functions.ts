@@ -452,9 +452,6 @@ export const enrichLead = createServerFn({ method: "POST" })
       id: s.id,
     }));
     const enabledSources = enabledRows.map((s) => s["name"] as string).filter(Boolean);
-    const webSourceEnabled = enabledRows.some((s) =>
-      /firecrawl|web|scrap/i.test(`${s["id"] ?? ""} ${s["name"] ?? ""} ${s["type"] ?? ""}`),
-    );
 
     const ideaRow = await supabaseAdmin
       .from("business_ideas")
@@ -463,13 +460,20 @@ export const enrichLead = createServerFn({ method: "POST" })
       .maybeSingle();
     const idea = (ideaRow.data?.data ?? {}) as Record<string, any>;
 
-    // Recuperación real de contenido corporativo público (si la fuente web está habilitada).
-    const { scrapeCorporateSite, firecrawlStatus } = await import("./web-retrieval.server");
+    // Recuperación real de contenido corporativo público con la fuente configurada en "Fuentes de datos".
+    const { scrapeCorporateSite, loadWebConnector } = await import("./web-retrieval.server");
+    const connector = await loadWebConnector();
     let webContext = "";
     let webEvidence: Record<string, string> | null = null;
     let retrievalNote = "";
-    if (lead["website"] && webSourceEnabled && firecrawlStatus().configured) {
-      const scraped = await scrapeCorporateSite(String(lead["website"]), { maxChars: 6000 });
+    if (!lead["website"]) {
+      retrievalNote = "El lead no tiene web corporativa registrada.";
+    } else if (!connector || !connector.enabled) {
+      retrievalNote = "Extracción web desactivada: no hay ninguna fuente de extracción habilitada.";
+    } else if (!connector.hasKey) {
+      retrievalNote = `Extracción web desactivada: falta el secreto ${connector?.apiKeySecretName ?? "de la fuente"}.`;
+    } else {
+      const scraped = await scrapeCorporateSite(String(lead["website"]), { maxChars: 6000, connector });
       if (scraped.ok) {
         webContext = `\n\nContenido público extraído de la web corporativa (${scraped.sourceUrl}, ${scraped.retrievedAt}):\n"""${scraped.markdown}"""`;
         webEvidence = {
@@ -477,15 +481,15 @@ export const enrichLead = createServerFn({ method: "POST" })
           provider: scraped.provider,
           retrieved_at: scraped.retrievedAt,
           title: scraped.title ?? "",
+          source_id: connector.id,
+          endpoint: connector.baseUrl,
+          robots_checked: connector.respectRobots ? "sí" : "no",
         };
       } else {
         retrievalNote = `Extracción web no disponible: ${scraped.error}`;
       }
-    } else if (lead["website"] && !firecrawlStatus().configured) {
-      retrievalNote = "Extracción web desactivada: conector Firecrawl no conectado.";
-    } else if (lead["website"] && !webSourceEnabled) {
-      retrievalNote = "Extracción web desactivada: fuente web no habilitada en Fuentes de datos.";
     }
+
 
 
     const result = await callAiJson<{
