@@ -76,6 +76,7 @@ function Fuentes() {
       toast.success("Configuración de la fuente guardada");
       setEditing(null);
       void queryClient.invalidateQueries({ queryKey: ["sources"] });
+      void queryClient.invalidateQueries({ queryKey: ["connector-status"] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -104,12 +105,21 @@ function Fuentes() {
           <Pill tone={connectors?.aiGateway.configured ? "success" : "warning"}>
             Motor de IA: {connectors?.aiGateway.configured ? "Conectado" : "No conectado"}
           </Pill>
-          {connectors && !connectors.firecrawl.configured && (
+          {connectors?.firecrawl.configured ? (
             <p className="w-full text-xs text-muted-foreground">
-              Sin el conector de extracción web, el enriquecimiento de leads funciona solo por inferencia sobre datos
-              internos y se marca con confianza baja.
+              Extracción operando con los datos de conexión dados de alta: endpoint {connectors.firecrawl.endpoint} ·
+              secreto {connectors.firecrawl.secretName} · {connectors.firecrawl.rateLimitPerMin} req/min ·{" "}
+              {connectors.firecrawl.respectRobots ? "respeta robots.txt" : "robots.txt ignorado"}.
             </p>
+          ) : (
+            connectors && (
+              <p className="w-full text-xs text-muted-foreground">
+                Sin el conector de extracción web, el enriquecimiento de leads funciona solo por inferencia sobre datos
+                internos y se marca con confianza baja.
+              </p>
+            )
           )}
+
         </CardContent>
       </Card>
 
