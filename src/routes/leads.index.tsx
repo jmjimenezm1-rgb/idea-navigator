@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, Eye, Filter, RefreshCcw } from "lucide-react";
+import { Download, Eye, Filter, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -10,9 +10,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { validationStatuses } from "@/lib/demo-data";
+import { discoverLeads } from "@/lib/marketing.functions";
 import { ideasQuery, leadsQuery } from "@/lib/marketing-queries";
+
 
 export const Route = createFileRoute("/leads/")({
   head: () => ({
