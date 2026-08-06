@@ -48,6 +48,43 @@ function LeadsPage() {
   const [minScore, setMinScore] = useState(0);
   const [q, setQ] = useState("");
 
+  const queryClient = useQueryClient();
+  const runDiscovery = useServerFn(discoverLeads);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchIdea, setSearchIdea] = useState("");
+  const [searchSector, setSearchSector] = useState("");
+  const [searchCountry, setSearchCountry] = useState("");
+  const [searchSize, setSearchSize] = useState("");
+  const [searchKeywords, setSearchKeywords] = useState("");
+  const [searchLimit, setSearchLimit] = useState(5);
+
+  const discovery = useMutation({
+    mutationFn: async () =>
+      runDiscovery({
+        data: {
+          ideaId: searchIdea || businessIdeas[0]?.id || "",
+          sector: searchSector,
+          country: searchCountry,
+          companySize: searchSize,
+          keywords: searchKeywords,
+          limit: searchLimit,
+        },
+      }),
+    onSuccess: (result) => {
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(
+        `${result.created.length} lead(s) dados de alta desde ${result.hitCount} resultados públicos${
+          result.skipped.length ? ` · ${result.skipped.length} duplicado(s) omitido(s)` : ""
+        }`,
+      );
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const rows = useMemo(
     () =>
       potentialLeads.filter(
@@ -73,8 +110,8 @@ function LeadsPage() {
       subtitle={`${rows.length} de ${potentialLeads.length} leads · datos en base de datos`}
       actions={
         <>
-          <Button variant="outline" onClick={() => toast("Enriquecimiento simulado: conector no configurado")}>
-            <RefreshCcw className="size-4" /> Enriquecer
+          <Button variant="outline" onClick={() => setShowSearch((v) => !v)}>
+            <Search className="size-4" /> Buscar leads
           </Button>
           <Button asChild>
             <Link to="/exportacion">
@@ -85,7 +122,90 @@ function LeadsPage() {
       }
     >
       <div className="space-y-4">
+        {showSearch && (
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Search className="size-4" /> Búsqueda de nuevos leads en fuentes públicas
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Localiza empresas mediante la fuente de extracción dada de alta en Fuentes de datos. Cada lead se guarda
+                con URL de origen, proveedor y fecha; ninguno se marca apto para campaña directa hasta su validación
+                legal.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Idea de negocio</Label>
+                  <select className={selectCls} value={searchIdea} onChange={(e) => setSearchIdea(e.target.value)}>
+                    <option value="">{businessIdeas[0]?.name ?? "Sin ideas disponibles"}</option>
+                    {businessIdeas.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Sector objetivo</Label>
+                  <Input
+                    className="h-9"
+                    value={searchSector}
+                    onChange={(e) => setSearchSector(e.target.value)}
+                    placeholder="Ej. logística industrial"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">País / mercado</Label>
+                  <Input
+                    className="h-9"
+                    value={searchCountry}
+                    onChange={(e) => setSearchCountry(e.target.value)}
+                    placeholder="España"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Tamaño de empresa</Label>
+                  <Input
+                    className="h-9"
+                    value={searchSize}
+                    onChange={(e) => setSearchSize(e.target.value)}
+                    placeholder="Ej. 50-200 empleados"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Palabras clave</Label>
+                  <Input
+                    className="h-9"
+                    value={searchKeywords}
+                    onChange={(e) => setSearchKeywords(e.target.value)}
+                    placeholder="Ej. exportación, ecommerce B2B"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Nº máximo de leads: {searchLimit}</Label>
+                  <Input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={searchLimit}
+                    onChange={(e) => setSearchLimit(Number(e.target.value))}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => discovery.mutate()}
+                  disabled={discovery.isPending || (!searchIdea && businessIdeas.length === 0)}
+                >
+                  {discovery.isPending ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+                  {discovery.isPending ? "Buscando en fuentes públicas…" : "Buscar y dar de alta"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
+
           <CardContent className="space-y-3 p-4">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Filter className="size-4" /> Filtros
