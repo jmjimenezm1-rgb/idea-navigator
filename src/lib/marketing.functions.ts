@@ -580,21 +580,32 @@ opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido 
 
 /** Estado de los conectores externos disponibles para la recuperación de datos. */
 export const getConnectorStatus = createServerFn({ method: "GET" }).handler(async () => {
-  const { firecrawlStatus } = await import("./web-retrieval.server");
-  const fc = firecrawlStatus();
+  const { loadWebConnector, firecrawlStatus } = await import("./web-retrieval.server");
+  const connector = await loadWebConnector();
+  const fc = connector ? firecrawlStatus(connector.apiKeySecretName) : firecrawlStatus();
+  const ready = !!connector && connector.enabled && connector.hasKey;
+
   return {
     firecrawl: {
-      configured: fc.configured,
+      configured: ready,
       mode: fc.mode,
-      label: fc.configured
-        ? fc.mode === "gateway"
-          ? "Conectado (pasarela de conectores)"
-          : "Conectado (API directa)"
-        : "No conectado",
+      sourceName: connector?.name ?? "",
+      endpoint: connector?.baseUrl ?? "",
+      secretName: connector?.apiKeySecretName ?? "FIRECRAWL_API_KEY",
+      rateLimitPerMin: connector?.rateLimitPerMin ?? 0,
+      respectRobots: connector?.respectRobots ?? true,
+      label: !connector
+        ? "Sin fuente de extracción dada de alta"
+        : !connector.enabled
+          ? `${connector.name}: fuente desactivada`
+          : !connector.hasKey
+            ? `${connector.name}: falta el secreto ${connector.apiKeySecretName}`
+            : `${connector.name} · ${fc.mode === "gateway" ? "pasarela de conectores" : "API directa"}`,
     },
     aiGateway: { configured: !!process.env["LOVABLE_API_KEY"] },
   };
 });
+
 
 
 /** Actualiza la configuración de una fuente de datos (activación, credenciales, límites y política). */
