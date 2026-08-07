@@ -580,27 +580,51 @@ opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido 
 
 /** Estado de los conectores externos disponibles para la recuperación de datos. */
 export const getConnectorStatus = createServerFn({ method: "GET" }).handler(async () => {
-  const { loadWebConnector, firecrawlStatus } = await import("./web-retrieval.server");
-  const connector = await loadWebConnector();
-  const fc = connector ? firecrawlStatus(connector.apiKeySecretName) : firecrawlStatus();
-  const ready = !!connector && connector.enabled && connector.hasKey;
+  const { loadWebConnectors, pickConnector, connectorMode } = await import("./web-retrieval.server");
+  const all = await loadWebConnectors();
+  const scraper = await pickConnector("scrape");
+  const searcher = await pickConnector("search");
+
+  const describe = (c: (typeof all)[number] | null) => {
+    if (!c) return null;
+    const mode = connectorMode(c);
+    return {
+      id: c.id,
+      name: c.name,
+      provider: c.provider,
+      configured: c.enabled && c.hasKey,
+      mode,
+      endpoint: c.baseUrl,
+      secretName: c.apiKeySecretName,
+      rateLimitPerMin: c.rateLimitPerMin,
+      respectRobots: c.respectRobots,
+      canSearch: c.canSearch,
+      canScrape: c.canScrape,
+      label: !c.enabled
+        ? `${c.name}: fuente desactivada`
+        : !c.hasKey
+          ? `${c.name}: falta el secreto ${c.apiKeySecretName || "de API"}`
+          : `${c.name} · ${mode === "gateway" ? "pasarela de conectores" : "API directa"}`,
+    };
+  };
+
+  const scraperInfo = describe(scraper);
+  const searcherInfo = describe(searcher);
 
   return {
+    connectors: all.map((c) => describe(c)!),
+    scraper: scraperInfo,
+    search: searcherInfo,
+    // Compatibilidad con la interfaz existente.
     firecrawl: {
-      configured: ready,
-      mode: fc.mode,
-      sourceName: connector?.name ?? "",
-      endpoint: connector?.baseUrl ?? "",
-      secretName: connector?.apiKeySecretName ?? "FIRECRAWL_API_KEY",
-      rateLimitPerMin: connector?.rateLimitPerMin ?? 0,
-      respectRobots: connector?.respectRobots ?? true,
-      label: !connector
-        ? "Sin fuente de extracción dada de alta"
-        : !connector.enabled
-          ? `${connector.name}: fuente desactivada`
-          : !connector.hasKey
-            ? `${connector.name}: falta el secreto ${connector.apiKeySecretName}`
-            : `${connector.name} · ${fc.mode === "gateway" ? "pasarela de conectores" : "API directa"}`,
+      configured: scraperInfo?.configured ?? false,
+      mode: scraperInfo?.mode ?? ("none" as const),
+      sourceName: scraperInfo?.name ?? "",
+      endpoint: scraperInfo?.endpoint ?? "",
+      secretName: scraperInfo?.secretName ?? "FIRECRAWL_API_KEY",
+      rateLimitPerMin: scraperInfo?.rateLimitPerMin ?? 0,
+      respectRobots: scraperInfo?.respectRobots ?? true,
+      label: scraperInfo?.label ?? "Sin fuente de extracción dada de alta",
     },
     aiGateway: { configured: !!process.env["LOVABLE_API_KEY"] },
   };
