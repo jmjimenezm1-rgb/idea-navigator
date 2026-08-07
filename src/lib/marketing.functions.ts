@@ -802,8 +802,8 @@ export const runComplianceRules = createServerFn({ method: "POST" })
     });
   }
 
-  return { ok: true as const, evaluated: rows?.length ?? 0, changed, summary };
-});
+  return { ok: true as const, evaluated: rows?.length ?? 0, changed, summary, ideaId: data.ideaId ?? null };
+  });
 
 /** Guarda una nueva versión del prompt conservando siempre la anterior recuperable. */
 export const updatePrompt = createServerFn({ method: "POST" })
