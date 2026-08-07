@@ -175,7 +175,7 @@ function Cumplimiento() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...bloqueados, ...pendientes].slice(0, 20).map((l) => (
+                {cola.slice(0, 20).map((l) => (
                   <TableRow key={l.id}>
                     <TableCell className="max-w-52 truncate text-sm font-medium">{l.company_name}</TableCell>
                     <TableCell className="max-w-40 truncate text-xs">{l.source_name}</TableCell>
