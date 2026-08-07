@@ -692,11 +692,16 @@ export const updateDataSource = createServerFn({ method: "POST" })
     return { ok: true as const, source: { ...updated, id: row.id } };
   });
 
-/** Motor determinista de validaciones legales (RGPD / LSSI-CE) sobre todos los leads. */
-export const runComplianceRules = createServerFn({ method: "POST" }).handler(async () => {
+/** Motor determinista de validaciones legales (RGPD / LSSI-CE), global o limitado a una idea de negocio. */
+export const runComplianceRules = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ ideaId: z.string().trim().max(120).optional() }).parse(input ?? {}))
+  .handler(async ({ data }) => {
   const { supabaseAdmin } = await import("./marketing.server");
-  const { data: rows, error } = await supabaseAdmin.from("potential_leads").select("*");
+  let query = supabaseAdmin.from("potential_leads").select("*");
+  if (data.ideaId) query = query.eq("business_idea_id", data.ideaId);
+  const { data: rows, error } = await query;
   if (error) throw new Error(error.message);
+
 
   let changed = 0;
   const summary = { bloqueados: 0, pendientes: 0, aptos: 0, sin_fuente: 0 };
