@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -6,10 +7,11 @@ import { AppShell } from "@/components/AppShell";
 import { Pill, RiskBadge, StatusBadge, TriBadge } from "@/components/StatusBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
 import { roles } from "@/lib/demo-data";
-import { leadsQuery } from "@/lib/marketing-queries";
+import { ideasQuery, leadsQuery } from "@/lib/marketing-queries";
 import { runComplianceRules, updateLeadStatus } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/cumplimiento")({
