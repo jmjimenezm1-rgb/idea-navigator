@@ -97,31 +97,35 @@ function Fuentes() {
   return (
     <AppShell title="Fuentes de datos" subtitle="Activación, credenciales, límites de frecuencia y política de uso">
       <Card className="mb-4">
-        <CardContent className="flex flex-wrap items-center gap-3 p-4">
-          <p className="text-sm font-medium">Conectores del backend</p>
-          <Pill tone={connectors?.firecrawl.configured ? "success" : "warning"}>
-            Extracción web: {connectors?.firecrawl.label ?? "comprobando…"}
-          </Pill>
-          <Pill tone={connectors?.aiGateway.configured ? "success" : "warning"}>
-            Motor de IA: {connectors?.aiGateway.configured ? "Conectado" : "No conectado"}
-          </Pill>
-          {connectors?.firecrawl.configured ? (
-            <p className="w-full text-xs text-muted-foreground">
-              Extracción operando con los datos de conexión dados de alta: endpoint {connectors.firecrawl.endpoint} ·
-              secreto {connectors.firecrawl.secretName} · {connectors.firecrawl.rateLimitPerMin} req/min ·{" "}
-              {connectors.firecrawl.respectRobots ? "respeta robots.txt" : "robots.txt ignorado"}.
+        <CardContent className="space-y-3 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm font-medium">Conectores del backend</p>
+            <Pill tone={connectors?.aiGateway.configured ? "success" : "warning"}>
+              Motor de IA: {connectors?.aiGateway.configured ? "Conectado" : "No conectado"}
+            </Pill>
+            {(connectors?.connectors ?? []).map((c) => (
+              <Pill key={c.id} tone={c.configured ? "success" : "warning"}>
+                {c.name}: {c.configured ? (c.mode === "gateway" ? "pasarela" : "API directa") : "no operativo"}
+              </Pill>
+            ))}
+          </div>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <p>
+              Extracción de contenido:{" "}
+              {connectors?.scraper?.configured
+                ? `${connectors.scraper.name} · ${connectors.scraper.endpoint} · ${connectors.scraper.rateLimitPerMin} req/min · ${connectors.scraper.respectRobots ? "respeta robots.txt" : "robots.txt ignorado"}`
+                : "sin conector operativo (el enriquecimiento funciona solo por inferencia y se marca con confianza baja)"}
             </p>
-          ) : (
-            connectors && (
-              <p className="w-full text-xs text-muted-foreground">
-                Sin el conector de extracción web, el enriquecimiento de leads funciona solo por inferencia sobre datos
-                internos y se marca con confianza baja.
-              </p>
-            )
-          )}
-
+            <p>
+              Búsqueda de empresas:{" "}
+              {connectors?.search?.configured
+                ? `${connectors.search.name} · ${connectors.search.endpoint} · ${connectors.search.rateLimitPerMin} req/min`
+                : "sin conector operativo (la búsqueda de leads queda desactivada)"}
+            </p>
+          </div>
         </CardContent>
       </Card>
+
 
       <div className="grid gap-3 lg:grid-cols-2">
 
