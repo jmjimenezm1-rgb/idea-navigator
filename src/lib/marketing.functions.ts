@@ -461,8 +461,8 @@ export const enrichLead = createServerFn({ method: "POST" })
     const idea = (ideaRow.data?.data ?? {}) as Record<string, any>;
 
     // Recuperación real de contenido corporativo público con la fuente configurada en "Fuentes de datos".
-    const { scrapeCorporateSite, loadWebConnector } = await import("./web-retrieval.server");
-    const connector = await loadWebConnector();
+    const { scrapeCorporateSite, pickConnector } = await import("./web-retrieval.server");
+    const connector = await pickConnector("scrape");
     let webContext = "";
     let webEvidence: Record<string, string> | null = null;
     let retrievalNote = "";
@@ -1051,8 +1051,8 @@ export const discoverLeads = createServerFn({ method: "POST" })
     const country = data.country || String(idea["target_market"] ?? "España");
 
     // 1) Recuperación pública real con el conector configurado.
-    const { searchWeb, loadWebConnector } = await import("./web-retrieval.server");
-    const connector = await loadWebConnector();
+    const { searchWeb, pickConnector } = await import("./web-retrieval.server");
+    const connector = await pickConnector("search");
     const query = [
       "empresas",
       sector,
