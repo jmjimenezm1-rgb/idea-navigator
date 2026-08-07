@@ -1,4 +1,4 @@
-// Recuperación lícita de contenido corporativo público (Firecrawl).
+// Recuperación lícita de contenido corporativo público (Firecrawl, Apify, Google CSE).
 // Toda la configuración operativa (endpoint, secreto, límite de frecuencia y robots.txt)
 // se lee de la fuente de datos dada de alta en la pantalla "Fuentes de datos".
 
@@ -8,19 +8,37 @@ export type WebFetchResult =
   | { ok: true; markdown: string; sourceUrl: string; title?: string | undefined; provider: string; retrievedAt: string }
   | { ok: false; error: string };
 
+export type ConnectorProvider = "firecrawl" | "apify" | "google_cse" | "other";
+
 export type WebConnector = {
   id: string;
   name: string;
+  provider: ConnectorProvider;
   enabled: boolean;
   baseUrl: string;
   apiKeySecretName: string;
   rateLimitPerMin: number;
   respectRobots: boolean;
   hasKey: boolean;
+  canSearch: boolean;
+  canScrape: boolean;
+  notes: string;
 };
 
-const DEFAULT_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
-const DEFAULT_DIRECT = "https://api.firecrawl.dev/v2";
+const DEFAULTS: Record<ConnectorProvider, { gateway: string; direct: string }> = {
+  firecrawl: { gateway: "https://connector-gateway.lovable.dev/firecrawl/v2", direct: "https://api.firecrawl.dev/v2" },
+  apify: { gateway: "https://connector-gateway.lovable.dev/apify", direct: "https://api.apify.com/v2" },
+  google_cse: { gateway: "https://www.googleapis.com/customsearch/v1", direct: "https://www.googleapis.com/customsearch/v1" },
+  other: { gateway: "", direct: "" },
+};
+
+export function detectProvider(text: string): ConnectorProvider {
+  if (/firecrawl/i.test(text)) return "firecrawl";
+  if (/apify/i.test(text)) return "apify";
+  if (/google\s*(custom)?\s*search|cse/i.test(text)) return "google_cse";
+  if (/scrap|extracci/i.test(text)) return "firecrawl";
+  return "other";
+}
 
 export function firecrawlStatus(secretName = "FIRECRAWL_API_KEY") {
   const key = process.env[secretName];
@@ -31,29 +49,61 @@ export function firecrawlStatus(secretName = "FIRECRAWL_API_KEY") {
   };
 }
 
-/** Carga la fuente de extracción web habilitada y su configuración desde la base de datos. */
-export async function loadWebConnector(): Promise<WebConnector | null> {
-  const { data } = await supabaseAdmin.from("data_sources").select("id, name, type, enabled, data");
-  const row = (data ?? []).find((s) =>
-    /firecrawl|web|scrap/i.test(`${s.id} ${s.name} ${s.type}`),
-  );
-  if (!row) return null;
+export function connectorMode(connector: WebConnector) {
+  const key = process.env[connector.apiKeySecretName];
+  if (!key) return "none" as const;
+  return key.startsWith("lovc_") ? ("gateway" as const) : ("direct" as const);
+}
 
+function toConnector(row: { id: string; name: string; type: string; enabled: boolean; data: any }): WebConnector {
   const payload = (row.data ?? {}) as Record<string, any>;
   const config = (payload["config"] ?? {}) as Record<string, any>;
-  const apiKeySecretName = String(config["api_key_secret_name"] || "FIRECRAWL_API_KEY");
-  const mode = firecrawlStatus(apiKeySecretName).mode;
+  const provider = detectProvider(`${row.id} ${row.name} ${row.type}`);
+  const apiKeySecretName = String(
+    config["api_key_secret_name"] || (provider === "firecrawl" ? "FIRECRAWL_API_KEY" : provider === "apify" ? "APIFY_API_KEY" : ""),
+  );
+  const key = apiKeySecretName ? process.env[apiKeySecretName] : undefined;
+  const mode = key ? (key.startsWith("lovc_") ? "gateway" : "direct") : "gateway";
+  const defaults = DEFAULTS[provider];
 
   return {
     id: row.id,
     name: row.name,
+    provider,
     enabled: !!row.enabled,
-    baseUrl: String(config["base_url"] || (mode === "direct" ? DEFAULT_DIRECT : DEFAULT_GATEWAY)).replace(/\/+$/, ""),
+    baseUrl: String(config["base_url"] || (mode === "direct" ? defaults.direct : defaults.gateway)).replace(/\/+$/, ""),
     apiKeySecretName,
     rateLimitPerMin: Number(config["rate_limit_per_min"] ?? 20),
     respectRobots: config["respect_robots"] !== false,
-    hasKey: !!process.env[apiKeySecretName],
+    hasKey: !!key,
+    canSearch: provider === "firecrawl" || provider === "apify" || provider === "google_cse",
+    canScrape: provider === "firecrawl" || provider === "apify",
+    notes: String(config["notes"] ?? ""),
   };
+}
+
+/** Todos los conectores de recuperación web dados de alta, con su configuración real. */
+export async function loadWebConnectors(): Promise<WebConnector[]> {
+  const { data } = await supabaseAdmin.from("data_sources").select("id, name, type, enabled, data");
+  return (data ?? [])
+    .map((row) => toConnector(row as any))
+    .filter((c) => c.provider !== "other");
+}
+
+/** Elige el conector operativo para una capacidad concreta (preferencia: Firecrawl → Apify → Google CSE). */
+export async function pickConnector(capability: "scrape" | "search"): Promise<WebConnector | null> {
+  const all = await loadWebConnectors();
+  const capable = all.filter((c) => (capability === "scrape" ? c.canScrape : c.canSearch));
+  const order: ConnectorProvider[] = ["firecrawl", "apify", "google_cse"];
+  const ready = capable
+    .filter((c) => c.enabled && c.hasKey)
+    .sort((a, b) => order.indexOf(a.provider) - order.indexOf(b.provider));
+  return ready[0] ?? capable.sort((a, b) => order.indexOf(a.provider) - order.indexOf(b.provider))[0] ?? null;
+}
+
+/** Compatibilidad: conector principal de extracción web. */
+export async function loadWebConnector(): Promise<WebConnector | null> {
+  return pickConnector("scrape");
 }
 
 /**
