@@ -33,12 +33,18 @@ export const Route = createFileRoute("/cumplimiento")({
 function Cumplimiento() {
   const queryClient = useQueryClient();
   const { data: potentialLeads = [] } = useQuery(leadsQuery);
+  const { data: ideas = [] } = useQuery(ideasQuery);
+  const [ideaId, setIdeaId] = useState("todas");
+  const [riskFilter, setRiskFilter] = useState("todos");
+  const [contactFilter, setContactFilter] = useState("todos");
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["leads"] });
 
   const rulesMutation = useMutation({
-    mutationFn: () => runComplianceRules(),
+    mutationFn: () => runComplianceRules({ data: ideaId === "todas" ? {} : { ideaId } }),
     onSuccess: (r) => {
-      toast.success(`Validación ejecutada sobre ${r.evaluated} leads · ${r.changed} actualizados`);
+      toast.success(
+        `Validación ejecutada sobre ${r.evaluated} leads · ${r.changed} actualizados${r.ideaId ? " (idea seleccionada)" : ""}`,
+      );
       void invalidate();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -53,9 +59,22 @@ function Cumplimiento() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const sinFuente = potentialLeads.filter((l) => !l.source_url);
-  const pendientes = potentialLeads.filter((l) => l.contact_allowed === "pendiente");
-  const bloqueados = potentialLeads.filter((l) => l.contact_allowed === "no");
+  const scoped = useMemo(
+    () =>
+      potentialLeads.filter(
+        (l) =>
+          (ideaId === "todas" || l.business_idea_id === ideaId) &&
+          (riskFilter === "todos" || l.risk_level === riskFilter) &&
+          (contactFilter === "todos" || l.contact_allowed === contactFilter),
+      ),
+    [potentialLeads, ideaId, riskFilter, contactFilter],
+  );
+
+  const sinFuente = scoped.filter((l) => !l.source_url);
+  const pendientes = scoped.filter((l) => l.contact_allowed === "pendiente");
+  const bloqueados = scoped.filter((l) => l.contact_allowed === "no");
+  const cola = contactFilter === "todos" ? [...bloqueados, ...pendientes] : scoped;
+  const ideaName = ideas.find((i) => i.id === ideaId)?.name;
 
   return (
     <AppShell
@@ -64,16 +83,62 @@ function Cumplimiento() {
       actions={
         <Button disabled={rulesMutation.isPending} onClick={() => rulesMutation.mutate()}>
           {rulesMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-          Ejecutar validaciones legales
+          {ideaId === "todas" ? "Ejecutar validaciones legales" : "Validar leads de esta idea"}
         </Button>
       }
     >
       <div className="space-y-4">
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase">Idea de negocio</p>
+              <Select value={ideaId} onValueChange={setIdeaId}>
+                <SelectTrigger><SelectValue placeholder="Todas las ideas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las ideas</SelectItem>
+                  {ideas.map((i) => (
+                    <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase">Nivel de riesgo</p>
+              <Select value={riskFilter} onValueChange={setRiskFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="bajo">Bajo</SelectItem>
+                  <SelectItem value="medio">Medio</SelectItem>
+                  <SelectItem value="alto">Alto</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase">Aptitud de contacto</p>
+              <Select value={contactFilter} onValueChange={setContactFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="sí">Apto</SelectItem>
+                  <SelectItem value="pendiente">Pendiente</SelectItem>
+                  <SelectItem value="no">Bloqueado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground sm:col-span-3">
+              {scoped.length} leads en el ámbito seleccionado{ideaName ? ` · idea "${ideaName}"` : " · todas las ideas"}.
+              Las validaciones legales se ejecutan solo sobre este ámbito.
+            </p>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-3 sm:grid-cols-3">
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Sin fuente trazable</p><p className="font-display text-2xl font-semibold text-destructive">{sinFuente.length}</p></CardContent></Card>
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Pendientes de validación</p><p className="font-display text-2xl font-semibold text-warning-foreground">{pendientes.length}</p></CardContent></Card>
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Bloqueados para contacto</p><p className="font-display text-2xl font-semibold text-destructive">{bloqueados.length}</p></CardContent></Card>
         </div>
+
 
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Reglas aplicadas automáticamente</CardTitle></CardHeader>
