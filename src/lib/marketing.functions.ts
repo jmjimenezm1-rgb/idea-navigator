@@ -596,6 +596,7 @@ export const getConnectorStatus = createServerFn({ method: "GET" }).handler(asyn
       mode,
       endpoint: c.baseUrl,
       secretName: c.apiKeySecretName,
+      keyOrigin: c.keyOrigin ?? "ninguno",
       rateLimitPerMin: c.rateLimitPerMin,
       respectRobots: c.respectRobots,
       canSearch: c.canSearch,
@@ -603,8 +604,9 @@ export const getConnectorStatus = createServerFn({ method: "GET" }).handler(asyn
       label: !c.enabled
         ? `${c.name}: fuente desactivada`
         : !c.hasKey
-          ? `${c.name}: falta el secreto ${c.apiKeySecretName || "de API"}`
+          ? `${c.name}: falta la clave de API en Fuentes de datos`
           : `${c.name} · ${mode === "gateway" ? "pasarela de conectores" : "API directa"}`,
+
     };
   };
 
@@ -645,6 +647,8 @@ export const updateDataSource = createServerFn({ method: "POST" })
         rate_limit_per_min: z.number().int().min(0).max(10000).optional(),
         respect_robots: z.boolean().optional(),
         api_key_secret_name: z.string().max(200).optional(),
+        api_key: z.string().max(500).optional(),
+        clear_api_key: z.boolean().optional(),
         notes: z.string().max(2000).optional(),
       })
       .parse(input),
@@ -659,6 +663,26 @@ export const updateDataSource = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Fuente de datos no encontrada.");
 
+    // Clave de API guardada en la propia fuente (tabla accesible solo por el servidor).
+    if (data.clear_api_key) {
+      await supabaseAdmin.from("data_source_credentials").delete().eq("data_source_id", data.id);
+    } else if (data.api_key && data.api_key.trim()) {
+      const up = await supabaseAdmin
+        .from("data_source_credentials")
+        .upsert(
+          { data_source_id: data.id, api_key: data.api_key.trim(), updated_at: new Date().toISOString() },
+          { onConflict: "data_source_id" },
+        );
+      if (up.error) throw new Error(up.error.message);
+    }
+
+    const cred = await supabaseAdmin
+      .from("data_source_credentials")
+      .select("data_source_id")
+      .eq("data_source_id", data.id)
+      .maybeSingle();
+    const hasStoredKey = !!cred.data;
+
     const current = row.data as Record<string, any>;
     const config = {
       ...(current["config"] ?? {}),
@@ -667,15 +691,21 @@ export const updateDataSource = createServerFn({ method: "POST" })
       respect_robots: data.respect_robots ?? current["config"]?.respect_robots ?? true,
       api_key_secret_name: data.api_key_secret_name ?? current["config"]?.api_key_secret_name ?? "",
       notes: data.notes ?? current["config"]?.notes ?? "",
+      has_api_key: hasStoredKey,
       updated_at: new Date().toISOString(),
     };
 
     const enabled = data.enabled ?? row.enabled;
-    if (enabled && current["requires_api_key"] && !config.api_key_secret_name) {
-      return { ok: false as const, error: "Esta fuente requiere indicar el nombre del secreto con la clave de API." };
+    const secretConfigured =
+      hasStoredKey || (config.api_key_secret_name ? !!process.env[config.api_key_secret_name] : false);
+    if (enabled && current["requires_api_key"] && !secretConfigured) {
+      return {
+        ok: false as const,
+        error: "Esta fuente requiere una clave de API: guárdala en el campo «Clave de API» de la fuente.",
+      };
     }
 
-    const status = data.status ?? (enabled ? "Conectado (demo)" : current["requires_api_key"] ? "No configurado" : row.status);
+    const status = data.status ?? (enabled ? "Conectado" : current["requires_api_key"] ? "No configurado" : row.status);
     const updated = {
       ...current,
       enabled,
@@ -691,6 +721,7 @@ export const updateDataSource = createServerFn({ method: "POST" })
     if (saved.error) throw new Error(saved.error.message);
     return { ok: true as const, source: { ...updated, id: row.id } };
   });
+
 
 /** Motor determinista de validaciones legales (RGPD / LSSI-CE), global o limitado a una idea de negocio. */
 export const runComplianceRules = createServerFn({ method: "POST" })

@@ -112,6 +112,35 @@ export type Database = {
         }
         Relationships: []
       }
+      data_source_credentials: {
+        Row: {
+          api_key: string
+          created_at: string
+          data_source_id: string
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          data_source_id: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          data_source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_source_credentials_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: true
+            referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_sources: {
         Row: {
           created_at: string
