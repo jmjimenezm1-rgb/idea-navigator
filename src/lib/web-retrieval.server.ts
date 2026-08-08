@@ -50,19 +50,28 @@ export function firecrawlStatus(secretName = "FIRECRAWL_API_KEY") {
 }
 
 export function connectorMode(connector: WebConnector) {
-  const key = process.env[connector.apiKeySecretName];
+  const key = connector.apiKey;
   if (!key) return "none" as const;
   return key.startsWith("lovc_") ? ("gateway" as const) : ("direct" as const);
 }
 
-function toConnector(row: { id: string; name: string; type: string; enabled: boolean; data: any }): WebConnector {
+/** Clave de API de la fuente: primero la dada de alta en "Fuentes de datos", si no el secreto del backend. */
+export async function resolveConnectorKey(connector: WebConnector): Promise<string | undefined> {
+  if (connector.apiKey) return connector.apiKey;
+  return connector.apiKeySecretName ? process.env[connector.apiKeySecretName] : undefined;
+}
+
+function toConnector(
+  row: { id: string; name: string; type: string; enabled: boolean; data: any },
+  storedKey?: string,
+): WebConnector {
   const payload = (row.data ?? {}) as Record<string, any>;
   const config = (payload["config"] ?? {}) as Record<string, any>;
   const provider = detectProvider(`${row.id} ${row.name} ${row.type}`);
   const apiKeySecretName = String(
     config["api_key_secret_name"] || (provider === "firecrawl" ? "FIRECRAWL_API_KEY" : provider === "apify" ? "APIFY_API_KEY" : ""),
   );
-  const key = apiKeySecretName ? process.env[apiKeySecretName] : undefined;
+  const key = storedKey || (apiKeySecretName ? process.env[apiKeySecretName] : undefined);
   const mode = key ? (key.startsWith("lovc_") ? "gateway" : "direct") : "gateway";
   const defaults = DEFAULTS[provider];
 
@@ -73,6 +82,8 @@ function toConnector(row: { id: string; name: string; type: string; enabled: boo
     enabled: !!row.enabled,
     baseUrl: String(config["base_url"] || (mode === "direct" ? defaults.direct : defaults.gateway)).replace(/\/+$/, ""),
     apiKeySecretName,
+    apiKey: key,
+    keyOrigin: storedKey ? ("fuente" as const) : key ? ("secreto" as const) : ("ninguno" as const),
     rateLimitPerMin: Number(config["rate_limit_per_min"] ?? 20),
     respectRobots: config["respect_robots"] !== false,
     hasKey: !!key,
@@ -84,11 +95,16 @@ function toConnector(row: { id: string; name: string; type: string; enabled: boo
 
 /** Todos los conectores de recuperación web dados de alta, con su configuración real. */
 export async function loadWebConnectors(): Promise<WebConnector[]> {
-  const { data } = await supabaseAdmin.from("data_sources").select("id, name, type, enabled, data");
+  const [{ data }, { data: creds }] = await Promise.all([
+    supabaseAdmin.from("data_sources").select("id, name, type, enabled, data"),
+    supabaseAdmin.from("data_source_credentials").select("data_source_id, api_key"),
+  ]);
+  const keys = new Map((creds ?? []).map((c: any) => [c.data_source_id as string, c.api_key as string]));
   return (data ?? [])
-    .map((row) => toConnector(row as any))
+    .map((row) => toConnector(row as any, keys.get((row as any).id)))
     .filter((c) => c.provider !== "other");
 }
+
 
 /** Elige el conector operativo para una capacidad concreta (preferencia: Firecrawl → Apify → Google CSE). */
 export async function pickConnector(capability: "scrape" | "search"): Promise<WebConnector | null> {
