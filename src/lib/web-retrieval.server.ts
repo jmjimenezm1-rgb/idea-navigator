@@ -239,11 +239,11 @@ export async function scrapeCorporateSite(
   if (!url) return { ok: false, error: "URL de empresa no válida." };
   if (!connector.canScrape) return { ok: false, error: `La fuente "${connector.name}" no permite extracción de contenido.` };
 
-  const key = connector.apiKeySecretName ? process.env[connector.apiKeySecretName] : undefined;
+  const key = await resolveConnectorKey(connector);
   if (!key) {
     return {
       ok: false,
-      error: `Conector "${connector.name}" sin credencial: falta el secreto ${connector.apiKeySecretName || "de API"}.`,
+      error: `Conector "${connector.name}" sin credencial: no hay clave de API guardada en la fuente${connector.apiKeySecretName ? ` ni secreto ${connector.apiKeySecretName}` : ""}.`,
     };
   }
 
@@ -327,9 +327,9 @@ export async function searchWeb(
   const { connector } = opts;
   if (!connector.canSearch) return { ok: false, error: `La fuente "${connector.name}" no permite búsqueda de empresas.` };
 
-  const key = connector.apiKeySecretName ? process.env[connector.apiKeySecretName] : undefined;
+  const key = await resolveConnectorKey(connector);
   if (!key) {
-    return { ok: false, error: `Conector "${connector.name}" sin credencial: falta el secreto ${connector.apiKeySecretName || "de API"}.` };
+    return { ok: false, error: `Conector "${connector.name}" sin credencial: no hay clave de API guardada en la fuente${connector.apiKeySecretName ? ` ni secreto ${connector.apiKeySecretName}` : ""}.` };
   }
   if (!(await consumeRateLimit(connector))) {
     return { ok: false, error: `Límite de ${connector.rateLimitPerMin} peticiones/minuto alcanzado en la fuente "${connector.name}".` };
