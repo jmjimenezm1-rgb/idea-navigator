@@ -17,6 +17,10 @@ export type WebConnector = {
   enabled: boolean;
   baseUrl: string;
   apiKeySecretName: string;
+  /** Solo servidor: nunca se devuelve al navegador. */
+  apiKey?: string | undefined;
+  keyOrigin?: "fuente" | "secreto" | "ninguno";
+
   rateLimitPerMin: number;
   respectRobots: boolean;
   hasKey: boolean;
