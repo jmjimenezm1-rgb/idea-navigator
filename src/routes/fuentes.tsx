@@ -145,7 +145,7 @@ function Fuentes() {
                   checked={s.enabled}
                   disabled={mutation.isPending}
                   onCheckedChange={(enabled) => {
-                    if (enabled && s.requires_api_key && !s.config?.has_api_key) {
+                    if (enabled && s.requires_api_key && !s.config?.has_api_key && !s.config?.api_key_secret_name) {
                       toast.error("Guarda primero la clave de API de esta fuente");
                       open(s);
                       return;
