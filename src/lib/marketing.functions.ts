@@ -596,6 +596,7 @@ export const getConnectorStatus = createServerFn({ method: "GET" }).handler(asyn
       mode,
       endpoint: c.baseUrl,
       secretName: c.apiKeySecretName,
+      keyOrigin: c.keyOrigin ?? "ninguno",
       rateLimitPerMin: c.rateLimitPerMin,
       respectRobots: c.respectRobots,
       canSearch: c.canSearch,
@@ -603,8 +604,9 @@ export const getConnectorStatus = createServerFn({ method: "GET" }).handler(asyn
       label: !c.enabled
         ? `${c.name}: fuente desactivada`
         : !c.hasKey
-          ? `${c.name}: falta el secreto ${c.apiKeySecretName || "de API"}`
+          ? `${c.name}: falta la clave de API en Fuentes de datos`
           : `${c.name} · ${mode === "gateway" ? "pasarela de conectores" : "API directa"}`,
+
     };
   };
 
