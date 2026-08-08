@@ -58,7 +58,7 @@ function Fuentes() {
   });
   const [editing, setEditing] = useState<SourceRow | null>(null);
   const [apiKey, setApiKey] = useState("");
-  const [form, setForm] = useState<Required<SourceConfig> & { usage_policy: string }>({
+  const [form, setForm] = useState<Required<Omit<SourceConfig, "has_api_key">> & { usage_policy: string }>({
     base_url: "",
     rate_limit_per_min: 30,
     respect_robots: true,
