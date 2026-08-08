@@ -33,6 +33,7 @@ type SourceConfig = {
   rate_limit_per_min?: number;
   respect_robots?: boolean;
   api_key_secret_name?: string;
+  has_api_key?: boolean;
   notes?: string;
   updated_at?: string;
 };
@@ -56,6 +57,7 @@ function Fuentes() {
     queryFn: () => getConnectorStatus(),
   });
   const [editing, setEditing] = useState<SourceRow | null>(null);
+  const [apiKey, setApiKey] = useState("");
   const [form, setForm] = useState<Required<SourceConfig> & { usage_policy: string }>({
     base_url: "",
     rate_limit_per_min: 30,
@@ -91,6 +93,7 @@ function Fuentes() {
       updated_at: s.config?.updated_at ?? "",
       usage_policy: s.usage_policy ?? "",
     });
+    setApiKey("");
     setEditing(s);
   };
 
@@ -142,8 +145,8 @@ function Fuentes() {
                   checked={s.enabled}
                   disabled={mutation.isPending}
                   onCheckedChange={(enabled) => {
-                    if (enabled && s.requires_api_key && !s.config?.api_key_secret_name) {
-                      toast.error("Configura primero el secreto con la clave de API");
+                    if (enabled && s.requires_api_key && !s.config?.has_api_key) {
+                      toast.error("Guarda primero la clave de API de esta fuente");
                       open(s);
                       return;
                     }
@@ -153,7 +156,7 @@ function Fuentes() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {s.type}
-                {s.requires_api_key ? " · requiere clave de API" : ""}
+                {s.requires_api_key ? (s.config?.has_api_key ? " · clave de API guardada" : " · falta la clave de API") : ""}
                 {s.config?.rate_limit_per_min ? ` · ${s.config.rate_limit_per_min} req/min` : ""}
                 {s.config?.respect_robots === false ? " · robots.txt ignorado" : " · respeta robots.txt"}
               </p>
@@ -185,9 +188,35 @@ function Fuentes() {
               <Input id="base_url" value={form.base_url} onChange={(e) => setForm({ ...form, base_url: e.target.value })} placeholder="https://api.proveedor.com/v1" />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="secret">Nombre del secreto con la clave de API</Label>
+              <Label htmlFor="api_key">Clave de API</Label>
+              <Input
+                id="api_key"
+                type="password"
+                autoComplete="off"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={editing?.config?.has_api_key ? "•••••••• (guardada — escribe para sustituirla)" : "Pega aquí la clave del proveedor"}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Se guarda cifrada del lado del servidor y nunca se devuelve al navegador.
+                </p>
+                {editing?.config?.has_api_key && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={mutation.isPending}
+                    onClick={() => editing && mutation.mutate({ data: { id: editing.id, clear_api_key: true, enabled: false } })}
+                  >
+                    Borrar clave
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="secret">Nombre del secreto del backend (opcional)</Label>
               <Input id="secret" value={form.api_key_secret_name} onChange={(e) => setForm({ ...form, api_key_secret_name: e.target.value })} placeholder="FIRECRAWL_API_KEY" />
-              <p className="text-xs text-muted-foreground">Nunca se guarda la clave: solo el nombre del secreto del backend.</p>
+              <p className="text-xs text-muted-foreground">Alternativa a la clave anterior: usar un secreto ya dado de alta en el backend.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
@@ -221,6 +250,7 @@ function Fuentes() {
                     rate_limit_per_min: form.rate_limit_per_min,
                     respect_robots: form.respect_robots,
                     api_key_secret_name: form.api_key_secret_name,
+                    ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}),
                     notes: form.notes,
                     usage_policy: form.usage_policy,
                   },
