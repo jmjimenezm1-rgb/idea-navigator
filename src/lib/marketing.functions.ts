@@ -436,7 +436,7 @@ export const listAnalyses = createServerFn({ method: "GET" }).handler(async () =
 export const enrichLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ leadId: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
-    const { supabaseAdmin, callAiJson } = await import("./marketing.server");
+    const { supabaseAdmin, callAiJson, getPromptOrSeed, renderTemplate } = await import("./marketing.server");
 
     const { data: leadRow, error } = await supabaseAdmin
       .from("potential_leads")
@@ -493,6 +493,8 @@ export const enrichLead = createServerFn({ method: "POST" })
 
 
 
+    const prompt = await getPromptOrSeed("prompt-7");
+    const promptData = prompt.data as { sistema: string; plantilla: string };
     const result = await callAiJson<{
       company_description: string;
       detected_need: string;
@@ -506,20 +508,24 @@ export const enrichLead = createServerFn({ method: "POST" })
       enrichment_notes: string;
       confidence_level: "alta" | "media" | "baja";
     }>({
-      model: "google/gemini-3.6-flash",
-      system:
-        "Eres analista de prospección B2B. Enriqueces fichas de empresa SOLO con información corporativa pública y con el contexto verificable aportado. Está prohibido inventar datos personales, emails, teléfonos o cifras concretas no verificables. Si un dato no consta, dilo explícitamente. Escribe en español.",
-      user: `Empresa: ${lead["company_name"]} (${lead["commercial_name"] ?? ""}).
-Sector: ${lead["sector"]} / ${lead["subsector"] ?? ""}. País: ${lead["country"]}, ciudad: ${lead["city"] ?? ""}.
-Tamaño: ${lead["company_size"] ?? "desconocido"}. Web: ${lead["website"] ?? ""}.
-Descripción actual: ${lead["company_description"] ?? "sin datos"}.
-Necesidad detectada actual: ${lead["detected_need"] ?? "sin datos"}.
-Fuente del dato: ${lead["source_name"] ?? ""} (${lead["source_url"] ?? ""}), obtenido el ${lead["retrieved_at"] ?? ""}.
-Fuentes de datos habilitadas en el sistema: ${enabledSources.join(", ") || "solo datos internos"}.
-Idea/producto a encajar: ${idea["name"] ?? ""}. ${idea["description"] ?? ""} Cliente objetivo: ${idea["target_customer"] ?? ""}.${webContext}
-
-Devuelve JSON: {"company_description":string,"detected_need":string,"fit_reason":string,"fit_level":"Alto"|"Medio"|"Bajo","opportunity_score":number,"why_fits":string,"probable_need":string,"objections":string[],"next_action":string,"enrichment_notes":string,"confidence_level":"alta"|"media"|"baja"}
-opportunity_score de 0 a 100. enrichment_notes debe indicar qué se ha inferido y qué queda sin verificar${webEvidence ? ", citando la web corporativa como fuente cuando proceda" : " (no hay extracción web disponible en esta ejecución)"}.`,
+      model: prompt.modelo || "google/gemini-3.6-flash",
+      system: promptData.sistema,
+      user: renderTemplate(promptData.plantilla, {
+        empresa: String(lead["company_name"] ?? ""),
+        nombre_comercial: String(lead["commercial_name"] ?? ""),
+        sector: `${lead["sector"] ?? ""} / ${lead["subsector"] ?? ""}`,
+        pais: String(lead["country"] ?? ""),
+        ciudad: String(lead["city"] ?? ""),
+        tamano: String(lead["company_size"] ?? "desconocido"),
+        web: String(lead["website"] ?? ""),
+        descripcion: String(lead["company_description"] ?? "sin datos"),
+        necesidad: String(lead["detected_need"] ?? "sin datos"),
+        fuente: `${lead["source_name"] ?? ""} (${lead["source_url"] ?? ""}), obtenido el ${lead["retrieved_at"] ?? ""}`,
+        fuentes_habilitadas: enabledSources.join(", ") || "solo datos internos",
+        idea: `${idea["name"] ?? ""}. ${idea["description"] ?? ""}`,
+        cliente_objetivo: String(idea["target_customer"] ?? ""),
+        contexto_web: webContext || "No hay extracción web disponible en esta ejecución.",
+      }),
     });
 
     if (!result.ok) return { ok: false as const, error: result.error };
@@ -1069,7 +1075,7 @@ export const discoverLeads = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin, callAiJson } = await import("./marketing.server");
+    const { supabaseAdmin, callAiJson, getPromptOrSeed, renderTemplate } = await import("./marketing.server");
 
     const ideaRow = await supabaseAdmin
       .from("business_ideas")
@@ -1130,6 +1136,8 @@ export const discoverLeads = createServerFn({ method: "POST" })
     }
 
     // 2) Estructuración con IA, sin inventar datos de contacto.
+    const prompt = await getPromptOrSeed("prompt-8");
+    const promptData = prompt.data as { sistema: string; plantilla: string };
     const result = await callAiJson<{
       leads: {
         company_name: string;
@@ -1148,21 +1156,19 @@ export const discoverLeads = createServerFn({ method: "POST" })
         discard_reason?: string;
       }[];
     }>({
-      model: "google/gemini-3.6-flash",
-      system:
-        "Eres analista de prospección B2B en la UE. A partir de resultados de búsqueda web públicos, identificas EMPRESAS (nunca personas ni autónomos identificables) que encajan con una propuesta de valor. Prohibido inventar nombres de personas, emails, teléfonos o URLs que no aparezcan en los resultados. Descarta directorios, agregadores, medios, blogs y páginas que no sean la web de una empresa concreta. Escribe en español.",
-      user: `Idea/producto: ${ideaRow.data.name}. ${idea["description"] ?? ""}
-Cliente objetivo: ${idea["target_customer"] ?? ""}. Propuesta de valor: ${idea["value_proposition"] ?? ""}.
-Criterios de búsqueda: sector "${sector}", país "${country}", tamaño "${data.companySize ?? "cualquiera"}", palabras clave "${data.keywords ?? "-"}".
-
-Resultados de búsqueda pública (usa SOLO estos):
-"""
-${evidence}
-"""
-
-Devuelve como máximo ${data.limit} empresas válidas en JSON:
-{"leads":[{"company_name":string,"website":string,"source_index":number,"sector":string,"subsector":string,"country":string,"city":string,"company_size":string,"company_description":string,"detected_need":string,"fit_reason":string,"fit_level":"Alto"|"Medio"|"Bajo","opportunity_score":number}]}
-source_index es el número del resultado del que procede cada empresa. website debe ser exactamente la URL de ese resultado. opportunity_score de 0 a 100. Si un resultado no es una empresa concreta, omítelo.`,
+      model: prompt.modelo || "google/gemini-3.6-flash",
+      system: promptData.sistema,
+      user: renderTemplate(promptData.plantilla, {
+        idea: `${ideaRow.data.name}. ${idea["description"] ?? ""}`,
+        cliente_objetivo: String(idea["target_customer"] ?? ""),
+        propuesta_valor: String(idea["value_proposition"] ?? ""),
+        sector,
+        pais: country,
+        tamano: data.companySize ?? "cualquiera",
+        palabras_clave: data.keywords ?? "-",
+        resultados: evidence,
+        limite: String(data.limit),
+      }),
     });
 
     if (!result.ok) return { ok: false as const, error: result.error };
