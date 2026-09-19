@@ -1294,3 +1294,92 @@ export const discoverLeads = createServerFn({ method: "POST" })
       hitCount: hits.length,
     };
   });
+
+/** Cambio de estado de una idea de negocio. */
+export const updateIdeaStatus = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ ideaId: z.string().min(1), status: z.string().min(2).max(60) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("./marketing.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("business_ideas")
+      .select("*")
+      .eq("id", data.ideaId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Idea no encontrada.");
+    const record = { ...(row.data as Record<string, any>), status: data.status };
+    const saved = await supabaseAdmin
+      .from("business_ideas")
+      .update({ status: data.status, data: record })
+      .eq("id", data.ideaId);
+    if (saved.error) throw new Error(saved.error.message);
+    return { ok: true as const, status: data.status };
+  });
+
+/** Archiva o desarchiva una idea y todos sus leads asociados. */
+export const archiveIdea = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ ideaId: z.string().min(1), archived: z.boolean().default(true) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("./marketing.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("business_ideas")
+      .select("*")
+      .eq("id", data.ideaId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Idea no encontrada.");
+
+    const status = data.archived ? "Finalizada" : "En curso";
+    const record = {
+      ...(row.data as Record<string, any>),
+      status,
+      archived: data.archived,
+      archived_at: data.archived ? new Date().toISOString() : null,
+    };
+    const savedIdea = await supabaseAdmin
+      .from("business_ideas")
+      .update({ status, data: record })
+      .eq("id", data.ideaId);
+    if (savedIdea.error) throw new Error(savedIdea.error.message);
+
+    const leads = await supabaseAdmin.from("potential_leads").select("id, data").eq("business_idea_id", data.ideaId);
+    if (leads.error) throw new Error(leads.error.message);
+    for (const lead of leads.data ?? []) {
+      const leadRecord = { ...(lead.data as Record<string, any>), archived: data.archived };
+      await supabaseAdmin.from("potential_leads").update({ data: leadRecord }).eq("id", lead.id);
+      await supabaseAdmin.from("lead_events").insert({
+        potential_lead_id: lead.id,
+        action: data.archived ? "Lead archivado al archivar su idea de negocio" : "Lead desarchivado",
+        previous_status: "",
+        new_status: "",
+        actor: "Gestión de ideas",
+      });
+    }
+
+    return { ok: true as const, archived: data.archived, leads: leads.data?.length ?? 0 };
+  });
+
+/** Borra una idea de negocio y todos los registros asociados. */
+export const deleteIdea = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ ideaId: z.string().min(1) }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("./marketing.server");
+    const leads = await supabaseAdmin.from("potential_leads").select("id").eq("business_idea_id", data.ideaId);
+    if (leads.error) throw new Error(leads.error.message);
+    const leadIds = (leads.data ?? []).map((l) => l.id);
+
+    if (leadIds.length) {
+      await supabaseAdmin.from("ai_drafts").delete().in("potential_lead_id", leadIds);
+      await supabaseAdmin.from("lead_events").delete().in("potential_lead_id", leadIds);
+      await supabaseAdmin.from("potential_leads").delete().in("id", leadIds);
+    }
+    await supabaseAdmin.from("viability_analyses").delete().eq("business_idea_id", data.ideaId);
+    const removed = await supabaseAdmin.from("business_ideas").delete().eq("id", data.ideaId);
+    if (removed.error) throw new Error(removed.error.message);
+
+    return { ok: true as const, deletedLeads: leadIds.length };
+  });
