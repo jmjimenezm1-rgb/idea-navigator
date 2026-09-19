@@ -71,7 +71,8 @@ export const getLeadDetail = createServerFn({ method: "GET" })
   });
 
 export const listPrompts = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("./marketing.server");
+  const { supabaseAdmin, ensureCorePrompts } = await import("./marketing.server");
+  await ensureCorePrompts();
   const { data, error } = await supabaseAdmin.from("ai_prompts").select("id, data").order("id");
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => ({ ...(row.data as Record<string, unknown>), id: row.id }));
