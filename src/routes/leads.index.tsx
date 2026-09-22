@@ -51,15 +51,18 @@ export const Route = createFileRoute("/leads/")({
 const selectCls = "h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
 
 function LeadsPage() {
+  const search = Route.useSearch();
   const { data: potentialLeads = [], isLoading } = useQuery(leadsQuery);
   const { data: businessIdeas = [] } = useQuery(ideasQuery);
   const [sector, setSector] = useState("");
   const [country, setCountry] = useState("");
   const [size, setSize] = useState("");
-  const [status, setStatus] = useState("");
-  const [allowed, setAllowed] = useState("");
-  const [risk, setRisk] = useState("");
-  const [idea, setIdea] = useState("");
+  const [status, setStatus] = useState(search.status ?? "");
+  const [allowed, setAllowed] = useState(search.allowed ?? "");
+  const [risk, setRisk] = useState(search.risk ?? "");
+  const [idea, setIdea] = useState(search.idea ?? "");
+  const [sinFuente, setSinFuente] = useState(search.sinFuente ?? false);
+  const [showArchived, setShowArchived] = useState(false);
   const [minScore, setMinScore] = useState(0);
   const [q, setQ] = useState("");
 
