@@ -310,8 +310,29 @@ function LeadsPage() {
                 />
               </div>
             </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--color-primary)]"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                />
+                Mostrar leads archivados
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--color-primary)]"
+                  checked={sinFuente}
+                  onChange={(e) => setSinFuente(e.target.checked)}
+                />
+                Solo leads sin fuente trazable
+              </label>
+            </div>
           </CardContent>
         </Card>
+
 
         <Card>
           <CardContent className="overflow-x-auto p-0">
