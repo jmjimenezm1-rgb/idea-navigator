@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Pill, RiskBadge, StatusBadge, TriBadge } from "@/components/StatusBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
@@ -37,6 +38,9 @@ function Cumplimiento() {
   const [ideaId, setIdeaId] = useState("todas");
   const [riskFilter, setRiskFilter] = useState("todos");
   const [contactFilter, setContactFilter] = useState("todos");
+  const [onlyActive, setOnlyActive] = useState(true);
+  const [notesFilter, setNotesFilter] = useState("");
+  const [zoneFilter, setZoneFilter] = useState("");
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["leads"] });
 
   const rulesMutation = useMutation({
@@ -59,16 +63,37 @@ function Cumplimiento() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const scoped = useMemo(
-    () =>
-      potentialLeads.filter(
-        (l) =>
-          (ideaId === "todas" || l.business_idea_id === ideaId) &&
-          (riskFilter === "todos" || l.risk_level === riskFilter) &&
-          (contactFilter === "todos" || l.contact_allowed === contactFilter),
-      ),
-    [potentialLeads, ideaId, riskFilter, contactFilter],
+  const activeIdeas = useMemo(
+    () => ideas.filter((i) => i.status === "En curso" && !i.archived),
+    [ideas],
   );
+  const visibleIdeas = onlyActive ? activeIdeas : ideas;
+  const activeIdeaIds = useMemo(() => new Set(activeIdeas.map((i) => i.id)), [activeIdeas]);
+
+  useEffect(() => {
+    if (onlyActive && ideaId !== "todas" && !activeIdeaIds.has(ideaId)) setIdeaId("todas");
+  }, [onlyActive, ideaId, activeIdeaIds]);
+
+  const scoped = useMemo(() => {
+    const notes = notesFilter.trim().toLowerCase();
+    const zone = zoneFilter.trim().toLowerCase();
+    return potentialLeads.filter((l) => {
+      if (l.archived) return false;
+      if (onlyActive && !activeIdeaIds.has(l.business_idea_id)) return false;
+      if (ideaId !== "todas" && l.business_idea_id !== ideaId) return false;
+      if (riskFilter !== "todos" && l.risk_level !== riskFilter) return false;
+      if (contactFilter !== "todos" && l.contact_allowed !== contactFilter) return false;
+      if (notes && !`${l.notes ?? ""} ${l.legal_recommendation ?? ""}`.toLowerCase().includes(notes)) return false;
+      if (
+        zone &&
+        ![l.region, l.province, l.postal_code, l.city, l.country]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(zone))
+      )
+        return false;
+      return true;
+    });
+  }, [potentialLeads, ideaId, riskFilter, contactFilter, onlyActive, activeIdeaIds, notesFilter, zoneFilter]);
 
   const sinFuente = scoped.filter((l) => !l.source_url);
   const pendientes = scoped.filter((l) => l.contact_allowed === "pendiente");
@@ -90,13 +115,22 @@ function Cumplimiento() {
       <div className="space-y-4">
         <Card>
           <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
+            <label className="flex items-center gap-2 rounded-md border border-border p-2.5 text-sm sm:col-span-3">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--color-primary)]"
+                checked={onlyActive}
+                onChange={(e) => setOnlyActive(e.target.checked)}
+              />
+              Mostrar solo clientes de ideas en curso
+            </label>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground uppercase">Idea de negocio</p>
               <Select value={ideaId} onValueChange={setIdeaId}>
                 <SelectTrigger><SelectValue placeholder="Todas las ideas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas las ideas</SelectItem>
-                  {ideas.map((i) => (
+                  {visibleIdeas.map((i) => (
                     <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -125,6 +159,24 @@ function Cumplimiento() {
                   <SelectItem value="no">Bloqueado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase">Notas</p>
+              <Input
+                className="h-9"
+                value={notesFilter}
+                onChange={(e) => setNotesFilter(e.target.value)}
+                placeholder="Texto en las notas del lead…"
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase">Región, provincia o código postal</p>
+              <Input
+                className="h-9"
+                value={zoneFilter}
+                onChange={(e) => setZoneFilter(e.target.value)}
+                placeholder="Ej. Cataluña, Málaga, 28004"
+              />
             </div>
             <p className="text-xs text-muted-foreground sm:col-span-3">
               {scoped.length} leads en el ámbito seleccionado{ideaName ? ` · idea "${ideaName}"` : " · todas las ideas"}.

@@ -17,6 +17,14 @@ import { discoverLeads } from "@/lib/marketing.functions";
 import { ideasQuery, leadsQuery } from "@/lib/marketing-queries";
 
 
+type LeadsSearch = {
+  idea?: string | undefined;
+  status?: string | undefined;
+  allowed?: string | undefined;
+  risk?: string | undefined;
+  sinFuente?: boolean | undefined;
+};
+
 export const Route = createFileRoute("/leads/")({
   head: () => ({
     meta: [
@@ -30,21 +38,31 @@ export const Route = createFileRoute("/leads/")({
       { property: "og:description", content: "Leads empresariales con trazabilidad de fuente y estado legal." },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): LeadsSearch => ({
+    idea: typeof search["idea"] === "string" ? (search["idea"] as string) : undefined,
+    status: typeof search["status"] === "string" ? (search["status"] as string) : undefined,
+    allowed: typeof search["allowed"] === "string" ? (search["allowed"] as string) : undefined,
+    risk: typeof search["risk"] === "string" ? (search["risk"] as string) : undefined,
+    sinFuente: search["sinFuente"] === true || search["sinFuente"] === "true" ? true : undefined,
+  }),
   component: LeadsPage,
 });
 
 const selectCls = "h-9 w-full rounded-md border border-input bg-background px-2 text-sm";
 
 function LeadsPage() {
+  const search = Route.useSearch();
   const { data: potentialLeads = [], isLoading } = useQuery(leadsQuery);
   const { data: businessIdeas = [] } = useQuery(ideasQuery);
   const [sector, setSector] = useState("");
   const [country, setCountry] = useState("");
   const [size, setSize] = useState("");
-  const [status, setStatus] = useState("");
-  const [allowed, setAllowed] = useState("");
-  const [risk, setRisk] = useState("");
-  const [idea, setIdea] = useState("");
+  const [status, setStatus] = useState(search.status ?? "");
+  const [allowed, setAllowed] = useState(search.allowed ?? "");
+  const [risk, setRisk] = useState(search.risk ?? "");
+  const [idea, setIdea] = useState(search.idea ?? "");
+  const [sinFuente, setSinFuente] = useState(search.sinFuente ?? false);
+  const [showArchived, setShowArchived] = useState(false);
   const [minScore, setMinScore] = useState(0);
   const [q, setQ] = useState("");
 
@@ -89,6 +107,8 @@ function LeadsPage() {
     () =>
       potentialLeads.filter(
         (l) =>
+          (showArchived || !l.archived) &&
+          (!sinFuente || !l.source_url) &&
           (!sector || l.sector === sector) &&
           (!country || l.country === country) &&
           (!size || l.company_size === size) &&
@@ -99,7 +119,7 @@ function LeadsPage() {
           l.opportunity_score >= minScore &&
           (!q || l.company_name.toLowerCase().includes(q.toLowerCase())),
       ),
-    [potentialLeads, sector, country, size, status, allowed, risk, idea, minScore, q],
+    [potentialLeads, sector, country, size, status, allowed, risk, idea, minScore, q, showArchived, sinFuente],
   );
 
   const uniq = (fn: (l: (typeof potentialLeads)[number]) => string) => [...new Set(potentialLeads.map(fn))];
@@ -290,8 +310,29 @@ function LeadsPage() {
                 />
               </div>
             </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--color-primary)]"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                />
+                Mostrar leads archivados
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--color-primary)]"
+                  checked={sinFuente}
+                  onChange={(e) => setSinFuente(e.target.checked)}
+                />
+                Solo leads sin fuente trazable
+              </label>
+            </div>
           </CardContent>
         </Card>
+
 
         <Card>
           <CardContent className="overflow-x-auto p-0">

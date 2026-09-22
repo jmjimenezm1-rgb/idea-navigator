@@ -13,12 +13,16 @@ import {
 } from "recharts";
 import { AlertTriangle, ArrowRight, FileSearch, ShieldAlert, Users } from "lucide-react";
 
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
 import { AppShell } from "@/components/AppShell";
 import { DemoTag, Pill, StatusBadge } from "@/components/StatusBadges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { analysesQuery, ideasQuery, leadsQuery } from "@/lib/marketing-queries";
+import { archiveIdea, deleteIdea, updateIdeaStatus } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -67,9 +71,55 @@ function Kpi({ label, value, hint, tone }: { label: string; value: number | stri
 }
 
 function Dashboard() {
-  const { data: leads = [] } = useQuery(leadsQuery);
-  const { data: businessIdeas = [] } = useQuery(ideasQuery);
+  const queryClient = useQueryClient();
+  const { data: allLeads = [] } = useQuery(leadsQuery);
+  const { data: allIdeas = [] } = useQuery(ideasQuery);
   const { data: viabilityAnalyses = [] } = useQuery(analysesQuery);
+  const [onlyActive, setOnlyActive] = useState(true);
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["ideas"] });
+    void queryClient.invalidateQueries({ queryKey: ["leads"] });
+    void queryClient.invalidateQueries({ queryKey: ["analyses"] });
+  };
+
+  const statusMutation = useMutation({
+    mutationFn: (vars: { ideaId: string; status: string }) => updateIdeaStatus({ data: vars }),
+    onSuccess: (r) => {
+      toast.success(`Idea marcada como "${r.status}"`);
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (vars: { ideaId: string; archived: boolean }) => archiveIdea({ data: vars }),
+    onSuccess: (r) => {
+      toast.success(r.archived ? `Idea archivada junto a ${r.leads} lead(s)` : "Idea recuperada del archivo");
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (ideaId: string) => deleteIdea({ data: { ideaId } }),
+    onSuccess: (r) => {
+      toast.success(`Idea eliminada junto a ${r.deletedLeads} lead(s)`);
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const businessIdeas = useMemo(
+    () => (onlyActive ? allIdeas.filter((i) => i.status === "En curso" && !i.archived) : allIdeas),
+    [allIdeas, onlyActive],
+  );
+  const ideaIds = useMemo(() => new Set(businessIdeas.map((i) => i.id)), [businessIdeas]);
+  const leads = useMemo(
+    () => allLeads.filter((l) => !l.archived && ideaIds.has(l.business_idea_id)),
+    [allLeads, ideaIds],
+  );
+
   const validated = leads.filter((l) => ["Validado", "Consentimiento obtenido", "Convertido en cliente"].includes(l.validation_status));
   const pending = leads.filter((l) => l.validation_status.startsWith("Pendiente"));
   const notAllowed = leads.filter((l) => l.contact_allowed === "no");
@@ -98,10 +148,88 @@ function Dashboard() {
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi label="Ideas exploradas" value={businessIdeas.length} hint={`${businessIdeas.filter((i) => i.status === "En curso").length} en curso · ${businessIdeas.filter((i) => i.status === "Finalizada").length} finalizadas`} />
-          <Kpi label="Leads identificados" value={leads.length} hint="Generados en modo datos simulados" />
-          <Kpi label="Leads validados" value={validated.length} tone="text-success" hint="Con fuente y base jurídica" />
-          <Kpi label="No aptos para campaña directa" value={notAllowed.length} tone="text-destructive" hint="Bloqueados hasta validación legal" />
+          <Kpi label="Leads identificados" value={leads.length} hint="Ver todos los leads del ámbito" to={{}} />
+          <Kpi label="Leads validados" value={validated.length} tone="text-success" hint="Con fuente y base jurídica" to={{ status: "Validado" }} />
+          <Kpi label="No aptos para campaña directa" value={notAllowed.length} tone="text-destructive" hint="Bloqueados hasta validación legal" to={{ allowed: "no" }} />
         </div>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm">Ideas exploradas</CardTitle>
+            <label className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--color-primary)]"
+                checked={onlyActive}
+                onChange={(e) => setOnlyActive(e.target.checked)}
+              />
+              Mostrar solo ideas en curso
+            </label>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {businessIdeas.length === 0 && (
+              <p className="text-sm text-muted-foreground">No hay ideas en este ámbito.</p>
+            )}
+            {businessIdeas.map((idea) => {
+              const analysis = viabilityAnalyses.find((a) => a.business_idea_id === idea.id);
+              const ideaLeads = allLeads.filter((l) => l.business_idea_id === idea.id && !l.archived);
+              const nextStatus =
+                idea.status === "En curso" ? "Finalizada" : idea.status === "Finalizada" ? "Borrador" : "En curso";
+              return (
+                <div
+                  key={idea.id}
+                  className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60"
+                >
+                  <FileSearch className="size-4 shrink-0 text-muted-foreground" />
+                  <Link to="/ideas/$ideaId" params={{ ideaId: idea.id }} className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{idea.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {idea.sector} · {idea.geography} · {idea.created_at}
+                    </p>
+                  </Link>
+                  <button
+                    type="button"
+                    title="Cambiar estado"
+                    disabled={statusMutation.isPending}
+                    onClick={() => statusMutation.mutate({ ideaId: idea.id, status: nextStatus })}
+                  >
+                    <Pill tone={idea.status === "Finalizada" ? "success" : "info"}>{idea.status}</Pill>
+                  </button>
+                  {analysis && <Pill tone="neutral">Viabilidad {analysis.viability_score}</Pill>}
+                  <Button size="sm" variant="ghost" asChild>
+                    <Link to="/leads" search={{ idea: idea.id }}>
+                      {ideaLeads.length} leads
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title={idea.archived ? "Desarchivar idea" : "Archivar idea y sus leads"}
+                    disabled={archiveMutation.isPending}
+                    onClick={() => archiveMutation.mutate({ ideaId: idea.id, archived: !idea.archived })}
+                  >
+                    <Archive className="size-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    title="Borrar idea y todos sus registros"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => {
+                      if (confirm(`¿Borrar "${idea.name}" y todos sus registros asociados?`)) {
+                        deleteMutation.mutate(idea.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
