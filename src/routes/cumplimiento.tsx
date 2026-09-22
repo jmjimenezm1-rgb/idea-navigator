@@ -159,6 +159,24 @@ function Cumplimiento() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase">Notas</p>
+              <Input
+                className="h-9"
+                value={notesFilter}
+                onChange={(e) => setNotesFilter(e.target.value)}
+                placeholder="Texto en las notas del lead…"
+              />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase">Región, provincia o código postal</p>
+              <Input
+                className="h-9"
+                value={zoneFilter}
+                onChange={(e) => setZoneFilter(e.target.value)}
+                placeholder="Ej. Cataluña, Málaga, 28004"
+              />
+            </div>
             <p className="text-xs text-muted-foreground sm:col-span-3">
               {scoped.length} leads en el ámbito seleccionado{ideaName ? ` · idea "${ideaName}"` : " · todas las ideas"}.
               Las validaciones legales se ejecutan solo sobre este ámbito.
