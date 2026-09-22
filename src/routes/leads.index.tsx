@@ -107,6 +107,8 @@ function LeadsPage() {
     () =>
       potentialLeads.filter(
         (l) =>
+          (showArchived || !l.archived) &&
+          (!sinFuente || !l.source_url) &&
           (!sector || l.sector === sector) &&
           (!country || l.country === country) &&
           (!size || l.company_size === size) &&
@@ -117,7 +119,7 @@ function LeadsPage() {
           l.opportunity_score >= minScore &&
           (!q || l.company_name.toLowerCase().includes(q.toLowerCase())),
       ),
-    [potentialLeads, sector, country, size, status, allowed, risk, idea, minScore, q],
+    [potentialLeads, sector, country, size, status, allowed, risk, idea, minScore, q, showArchived, sinFuente],
   );
 
   const uniq = (fn: (l: (typeof potentialLeads)[number]) => string) => [...new Set(potentialLeads.map(fn))];
