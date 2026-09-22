@@ -148,10 +148,88 @@ function Dashboard() {
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi label="Ideas exploradas" value={businessIdeas.length} hint={`${businessIdeas.filter((i) => i.status === "En curso").length} en curso · ${businessIdeas.filter((i) => i.status === "Finalizada").length} finalizadas`} />
-          <Kpi label="Leads identificados" value={leads.length} hint="Generados en modo datos simulados" />
-          <Kpi label="Leads validados" value={validated.length} tone="text-success" hint="Con fuente y base jurídica" />
-          <Kpi label="No aptos para campaña directa" value={notAllowed.length} tone="text-destructive" hint="Bloqueados hasta validación legal" />
+          <Kpi label="Leads identificados" value={leads.length} hint="Ver todos los leads del ámbito" to={{}} />
+          <Kpi label="Leads validados" value={validated.length} tone="text-success" hint="Con fuente y base jurídica" to={{ status: "Validado" }} />
+          <Kpi label="No aptos para campaña directa" value={notAllowed.length} tone="text-destructive" hint="Bloqueados hasta validación legal" to={{ allowed: "no" }} />
         </div>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm">Ideas exploradas</CardTitle>
+            <label className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--color-primary)]"
+                checked={onlyActive}
+                onChange={(e) => setOnlyActive(e.target.checked)}
+              />
+              Mostrar solo ideas en curso
+            </label>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {businessIdeas.length === 0 && (
+              <p className="text-sm text-muted-foreground">No hay ideas en este ámbito.</p>
+            )}
+            {businessIdeas.map((idea) => {
+              const analysis = viabilityAnalyses.find((a) => a.business_idea_id === idea.id);
+              const ideaLeads = allLeads.filter((l) => l.business_idea_id === idea.id && !l.archived);
+              const nextStatus =
+                idea.status === "En curso" ? "Finalizada" : idea.status === "Finalizada" ? "Borrador" : "En curso";
+              return (
+                <div
+                  key={idea.id}
+                  className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60"
+                >
+                  <FileSearch className="size-4 shrink-0 text-muted-foreground" />
+                  <Link to="/ideas/$ideaId" params={{ ideaId: idea.id }} className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{idea.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {idea.sector} · {idea.geography} · {idea.created_at}
+                    </p>
+                  </Link>
+                  <button
+                    type="button"
+                    title="Cambiar estado"
+                    disabled={statusMutation.isPending}
+                    onClick={() => statusMutation.mutate({ ideaId: idea.id, status: nextStatus })}
+                  >
+                    <Pill tone={idea.status === "Finalizada" ? "success" : "info"}>{idea.status}</Pill>
+                  </button>
+                  {analysis && <Pill tone="neutral">Viabilidad {analysis.viability_score}</Pill>}
+                  <Button size="sm" variant="ghost" asChild>
+                    <Link to="/leads" search={{ idea: idea.id }}>
+                      {ideaLeads.length} leads
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    title={idea.archived ? "Desarchivar idea" : "Archivar idea y sus leads"}
+                    disabled={archiveMutation.isPending}
+                    onClick={() => archiveMutation.mutate({ ideaId: idea.id, archived: !idea.archived })}
+                  >
+                    <Archive className="size-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    title="Borrar idea y todos sus registros"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => {
+                      if (confirm(`¿Borrar "${idea.name}" y todos sus registros asociados?`)) {
+                        deleteMutation.mutate(idea.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
 
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
