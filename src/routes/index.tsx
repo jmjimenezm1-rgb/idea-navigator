@@ -71,9 +71,55 @@ function Kpi({ label, value, hint, tone }: { label: string; value: number | stri
 }
 
 function Dashboard() {
-  const { data: leads = [] } = useQuery(leadsQuery);
-  const { data: businessIdeas = [] } = useQuery(ideasQuery);
+  const queryClient = useQueryClient();
+  const { data: allLeads = [] } = useQuery(leadsQuery);
+  const { data: allIdeas = [] } = useQuery(ideasQuery);
   const { data: viabilityAnalyses = [] } = useQuery(analysesQuery);
+  const [onlyActive, setOnlyActive] = useState(true);
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["ideas"] });
+    void queryClient.invalidateQueries({ queryKey: ["leads"] });
+    void queryClient.invalidateQueries({ queryKey: ["analyses"] });
+  };
+
+  const statusMutation = useMutation({
+    mutationFn: (vars: { ideaId: string; status: string }) => updateIdeaStatus({ data: vars }),
+    onSuccess: (r) => {
+      toast.success(`Idea marcada como "${r.status}"`);
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (vars: { ideaId: string; archived: boolean }) => archiveIdea({ data: vars }),
+    onSuccess: (r) => {
+      toast.success(r.archived ? `Idea archivada junto a ${r.leads} lead(s)` : "Idea recuperada del archivo");
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (ideaId: string) => deleteIdea({ data: { ideaId } }),
+    onSuccess: (r) => {
+      toast.success(`Idea eliminada junto a ${r.deletedLeads} lead(s)`);
+      refresh();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const businessIdeas = useMemo(
+    () => (onlyActive ? allIdeas.filter((i) => i.status === "En curso" && !i.archived) : allIdeas),
+    [allIdeas, onlyActive],
+  );
+  const ideaIds = useMemo(() => new Set(businessIdeas.map((i) => i.id)), [businessIdeas]);
+  const leads = useMemo(
+    () => allLeads.filter((l) => !l.archived && ideaIds.has(l.business_idea_id)),
+    [allLeads, ideaIds],
+  );
+
   const validated = leads.filter((l) => ["Validado", "Consentimiento obtenido", "Convertido en cliente"].includes(l.validation_status));
   const pending = leads.filter((l) => l.validation_status.startsWith("Pendiente"));
   const notAllowed = leads.filter((l) => l.contact_allowed === "no");
