@@ -18,11 +18,11 @@ import { ideasQuery, leadsQuery } from "@/lib/marketing-queries";
 
 
 type LeadsSearch = {
-  idea?: string;
-  status?: string;
-  allowed?: string;
-  risk?: string;
-  sinFuente?: boolean;
+  idea?: string | undefined;
+  status?: string | undefined;
+  allowed?: string | undefined;
+  risk?: string | undefined;
+  sinFuente?: boolean | undefined;
 };
 
 export const Route = createFileRoute("/leads/")({
