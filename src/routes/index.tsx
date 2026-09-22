@@ -13,12 +13,16 @@ import {
 } from "recharts";
 import { AlertTriangle, ArrowRight, FileSearch, ShieldAlert, Users } from "lucide-react";
 
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
 import { AppShell } from "@/components/AppShell";
 import { DemoTag, Pill, StatusBadge } from "@/components/StatusBadges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { analysesQuery, ideasQuery, leadsQuery } from "@/lib/marketing-queries";
+import { archiveIdea, deleteIdea, updateIdeaStatus } from "@/lib/marketing.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
