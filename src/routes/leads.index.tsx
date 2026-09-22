@@ -30,6 +30,13 @@ export const Route = createFileRoute("/leads/")({
       { property: "og:description", content: "Leads empresariales con trazabilidad de fuente y estado legal." },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    idea: typeof search["idea"] === "string" ? (search["idea"] as string) : "",
+    status: typeof search["status"] === "string" ? (search["status"] as string) : "",
+    allowed: typeof search["allowed"] === "string" ? (search["allowed"] as string) : "",
+    risk: typeof search["risk"] === "string" ? (search["risk"] as string) : "",
+    sinFuente: search["sinFuente"] === true || search["sinFuente"] === "true",
+  }),
   component: LeadsPage,
 });
 
