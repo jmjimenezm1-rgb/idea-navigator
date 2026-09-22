@@ -17,6 +17,14 @@ import { discoverLeads } from "@/lib/marketing.functions";
 import { ideasQuery, leadsQuery } from "@/lib/marketing-queries";
 
 
+type LeadsSearch = {
+  idea?: string;
+  status?: string;
+  allowed?: string;
+  risk?: string;
+  sinFuente?: boolean;
+};
+
 export const Route = createFileRoute("/leads/")({
   head: () => ({
     meta: [
@@ -30,12 +38,12 @@ export const Route = createFileRoute("/leads/")({
       { property: "og:description", content: "Leads empresariales con trazabilidad de fuente y estado legal." },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    idea: typeof search["idea"] === "string" ? (search["idea"] as string) : "",
-    status: typeof search["status"] === "string" ? (search["status"] as string) : "",
-    allowed: typeof search["allowed"] === "string" ? (search["allowed"] as string) : "",
-    risk: typeof search["risk"] === "string" ? (search["risk"] as string) : "",
-    sinFuente: search["sinFuente"] === true || search["sinFuente"] === "true",
+  validateSearch: (search: Record<string, unknown>): LeadsSearch => ({
+    idea: typeof search["idea"] === "string" ? (search["idea"] as string) : undefined,
+    status: typeof search["status"] === "string" ? (search["status"] as string) : undefined,
+    allowed: typeof search["allowed"] === "string" ? (search["allowed"] as string) : undefined,
+    risk: typeof search["risk"] === "string" ? (search["risk"] as string) : undefined,
+    sinFuente: search["sinFuente"] === true || search["sinFuente"] === "true" ? true : undefined,
   }),
   component: LeadsPage,
 });
