@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -114,13 +114,22 @@ function Cumplimiento() {
       <div className="space-y-4">
         <Card>
           <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
+            <label className="flex items-center gap-2 rounded-md border border-border p-2.5 text-sm sm:col-span-3">
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--color-primary)]"
+                checked={onlyActive}
+                onChange={(e) => setOnlyActive(e.target.checked)}
+              />
+              Mostrar solo clientes de ideas en curso
+            </label>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground uppercase">Idea de negocio</p>
               <Select value={ideaId} onValueChange={setIdeaId}>
                 <SelectTrigger><SelectValue placeholder="Todas las ideas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas las ideas</SelectItem>
-                  {ideas.map((i) => (
+                  {visibleIdeas.map((i) => (
                     <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
                   ))}
                 </SelectContent>
