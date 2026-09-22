@@ -62,16 +62,37 @@ function Cumplimiento() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const scoped = useMemo(
-    () =>
-      potentialLeads.filter(
-        (l) =>
-          (ideaId === "todas" || l.business_idea_id === ideaId) &&
-          (riskFilter === "todos" || l.risk_level === riskFilter) &&
-          (contactFilter === "todos" || l.contact_allowed === contactFilter),
-      ),
-    [potentialLeads, ideaId, riskFilter, contactFilter],
+  const activeIdeas = useMemo(
+    () => ideas.filter((i) => i.status === "En curso" && !i.archived),
+    [ideas],
   );
+  const visibleIdeas = onlyActive ? activeIdeas : ideas;
+  const activeIdeaIds = useMemo(() => new Set(activeIdeas.map((i) => i.id)), [activeIdeas]);
+
+  useEffect(() => {
+    if (onlyActive && ideaId !== "todas" && !activeIdeaIds.has(ideaId)) setIdeaId("todas");
+  }, [onlyActive, ideaId, activeIdeaIds]);
+
+  const scoped = useMemo(() => {
+    const notes = notesFilter.trim().toLowerCase();
+    const zone = zoneFilter.trim().toLowerCase();
+    return potentialLeads.filter((l) => {
+      if (l.archived) return false;
+      if (onlyActive && !activeIdeaIds.has(l.business_idea_id)) return false;
+      if (ideaId !== "todas" && l.business_idea_id !== ideaId) return false;
+      if (riskFilter !== "todos" && l.risk_level !== riskFilter) return false;
+      if (contactFilter !== "todos" && l.contact_allowed !== contactFilter) return false;
+      if (notes && !`${l.notes ?? ""} ${l.legal_recommendation ?? ""}`.toLowerCase().includes(notes)) return false;
+      if (
+        zone &&
+        ![l.region, l.province, l.postal_code, l.city, l.country]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(zone))
+      )
+        return false;
+      return true;
+    });
+  }, [potentialLeads, ideaId, riskFilter, contactFilter, onlyActive, activeIdeaIds, notesFilter, zoneFilter]);
 
   const sinFuente = scoped.filter((l) => !l.source_url);
   const pendientes = scoped.filter((l) => l.contact_allowed === "pendiente");
