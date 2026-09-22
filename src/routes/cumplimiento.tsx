@@ -37,6 +37,9 @@ function Cumplimiento() {
   const [ideaId, setIdeaId] = useState("todas");
   const [riskFilter, setRiskFilter] = useState("todos");
   const [contactFilter, setContactFilter] = useState("todos");
+  const [onlyActive, setOnlyActive] = useState(true);
+  const [notesFilter, setNotesFilter] = useState("");
+  const [zoneFilter, setZoneFilter] = useState("");
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["leads"] });
 
   const rulesMutation = useMutation({
