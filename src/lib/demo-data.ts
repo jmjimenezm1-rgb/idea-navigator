@@ -44,6 +44,8 @@ export interface BusinessIdea {
   legal_constraints: string;
   competitors: string;
   status: "En curso" | "Finalizada" | "Borrador";
+  archived?: boolean;
+  archived_at?: string | null;
   created_at: string;
   created_by: string;
   demo: true;
@@ -162,6 +164,10 @@ export interface PotentialLead {
   risk_level: RiskLevel;
   legal_recommendation: string;
   notes: string;
+  region?: string;
+  province?: string;
+  postal_code?: string;
+  archived?: boolean;
   contacts: LeadContact[];
   ai_analysis: {
     why_fits: string;
