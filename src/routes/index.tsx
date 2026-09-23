@@ -196,7 +196,7 @@ function Dashboard() {
               return (
                 <div
                   key={idea.id}
-                  className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60"
+                  className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60 sm:flex sm:flex-wrap"
                 >
                   <FileSearch className="size-4 shrink-0 text-muted-foreground" />
                   <Link to="/ideas/$ideaId" params={{ ideaId: idea.id }} className="min-w-0 flex-1">
@@ -205,14 +205,17 @@ function Dashboard() {
                       {idea.sector} · {idea.geography} · {idea.created_at}
                     </p>
                   </Link>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="col-start-2 h-auto min-w-0 justify-self-start p-0 sm:col-start-auto"
                     title="Cambiar estado"
                     disabled={statusMutation.isPending}
                     onClick={() => statusMutation.mutate({ ideaId: idea.id, status: nextStatus })}
                   >
                     <Pill tone={idea.status === "Finalizada" ? "success" : "info"}>{idea.status}</Pill>
-                  </button>
+                  </Button>
                   {analysis && <Pill tone="neutral">Viabilidad {analysis.viability_score}</Pill>}
                   <Button size="sm" variant="ghost" asChild>
                     <Link to="/leads" search={{ idea: idea.id }}>
