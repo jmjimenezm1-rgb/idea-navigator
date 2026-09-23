@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AlertTriangle, ArrowRight, FileSearch, ShieldAlert, Users } from "lucide-react";
+import { AlertTriangle, Archive, ArrowRight, FileSearch, ShieldAlert, Trash2, Users } from "lucide-react";
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -58,14 +58,32 @@ const chartColors = [
   "var(--color-neutral)",
 ];
 
-function Kpi({ label, value, hint, tone }: { label: string; value: number | string; hint?: string; tone?: string }) {
+function Kpi({
+  label,
+  value,
+  hint,
+  tone,
+  to,
+}: {
+  label: string;
+  value: number | string;
+  hint?: string;
+  tone?: string;
+  to?: Record<string, string>;
+}) {
+  const body = (
+    <CardContent className="p-4">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className={`mt-1 font-display text-2xl font-semibold ${tone ?? ""}`}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </CardContent>
+  );
+  if (!to) return <Card className="shadow-none">{body}</Card>;
   return (
-    <Card className="shadow-none">
-      <CardContent className="p-4">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
-        <p className={`mt-1 font-display text-2xl font-semibold ${tone ?? ""}`}>{value}</p>
-        {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-      </CardContent>
+    <Card className="shadow-none transition-colors hover:bg-muted/60">
+      <Link to="/leads" search={to} className="block">
+        {body}
+      </Link>
     </Card>
   );
 }
