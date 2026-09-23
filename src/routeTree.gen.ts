@@ -14,6 +14,7 @@ import { Route as CumplimientoRouteImport } from './routes/cumplimiento'
 import { Route as ExportacionRouteImport } from './routes/exportacion'
 import { Route as FuentesRouteImport } from './routes/fuentes'
 import { Route as PromptsRouteImport } from './routes/prompts'
+import { Route as IdeasIndexRouteImport } from './routes/ideas.index'
 import { Route as IdeasIdeaIdRouteImport } from './routes/ideas.$ideaId'
 import { Route as IdeasNuevaRouteImport } from './routes/ideas.nueva'
 import { Route as LeadsIndexRouteImport } from './routes/leads.index'
@@ -43,6 +44,11 @@ const FuentesRoute = FuentesRouteImport.update({
 const PromptsRoute = PromptsRouteImport.update({
   id: '/prompts',
   path: '/prompts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IdeasIndexRoute = IdeasIndexRouteImport.update({
+  id: '/ideas/',
+  path: '/ideas/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IdeasIdeaIdRoute = IdeasIdeaIdRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/ideas/$ideaId': typeof IdeasIdeaIdRoute
   '/ideas/nueva': typeof IdeasNuevaRoute
   '/leads/$leadId': typeof LeadsLeadIdRoute
+  '/ideas/': typeof IdeasIndexRoute
   '/leads/': typeof LeadsIndexRoute
   '/api/public/seed': typeof ApiPublicSeedRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/ideas/$ideaId': typeof IdeasIdeaIdRoute
   '/ideas/nueva': typeof IdeasNuevaRoute
   '/leads/$leadId': typeof LeadsLeadIdRoute
+  '/ideas': typeof IdeasIndexRoute
   '/leads': typeof LeadsIndexRoute
   '/api/public/seed': typeof ApiPublicSeedRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/ideas/$ideaId': typeof IdeasIdeaIdRoute
   '/ideas/nueva': typeof IdeasNuevaRoute
   '/leads/$leadId': typeof LeadsLeadIdRoute
+  '/ideas/': typeof IdeasIndexRoute
   '/leads/': typeof LeadsIndexRoute
   '/api/public/seed': typeof ApiPublicSeedRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/ideas/$ideaId'
     | '/ideas/nueva'
     | '/leads/$leadId'
+    | '/ideas/'
     | '/leads/'
     | '/api/public/seed'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/ideas/$ideaId'
     | '/ideas/nueva'
     | '/leads/$leadId'
+    | '/ideas'
     | '/leads'
     | '/api/public/seed'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/ideas/$ideaId'
     | '/ideas/nueva'
     | '/leads/$leadId'
+    | '/ideas/'
     | '/leads/'
     | '/api/public/seed'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   IdeasIdeaIdRoute: typeof IdeasIdeaIdRoute
   IdeasNuevaRoute: typeof IdeasNuevaRoute
   LeadsLeadIdRoute: typeof LeadsLeadIdRoute
+  IdeasIndexRoute: typeof IdeasIndexRoute
   LeadsIndexRoute: typeof LeadsIndexRoute
   ApiPublicSeedRoute: typeof ApiPublicSeedRoute
 }
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/prompts'
       fullPath: '/prompts'
       preLoaderRoute: typeof PromptsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ideas/': {
+      id: '/ideas/'
+      path: '/ideas'
+      fullPath: '/ideas/'
+      preLoaderRoute: typeof IdeasIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ideas/$ideaId': {
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   IdeasIdeaIdRoute: IdeasIdeaIdRoute,
   IdeasNuevaRoute: IdeasNuevaRoute,
   LeadsLeadIdRoute: LeadsLeadIdRoute,
+  IdeasIndexRoute: IdeasIndexRoute,
   LeadsIndexRoute: LeadsIndexRoute,
   ApiPublicSeedRoute: ApiPublicSeedRoute,
 }
