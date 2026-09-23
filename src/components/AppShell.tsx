@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
+  ListChecks,
   Lightbulb,
   Users,
   ShieldCheck,
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/ideas", label: "Ideas exploradas", icon: ListChecks, exact: true },
   { to: "/ideas/nueva", label: "Nueva exploración", icon: Lightbulb, exact: false },
   { to: "/leads", label: "Clientes potenciales", icon: Users, exact: false },
   { to: "/cumplimiento", label: "Validación y legal", icon: ShieldCheck, exact: false },
@@ -39,7 +41,7 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex min-h-screen w-full min-w-0 overflow-x-hidden bg-background">
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:translate-x-0",
@@ -96,17 +98,17 @@ export function AppShell({
       )}
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-border bg-card/90 px-4 py-4 backdrop-blur sm:px-6">
-          <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menú">
+        <header className="sticky top-0 z-20 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-card/90 px-4 py-4 backdrop-blur sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <button className="shrink-0 lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menú">
             <Menu className="size-5" />
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-lg font-semibold">{title}</h1>
             {subtitle && <p className="truncate text-sm text-muted-foreground">{subtitle}</p>}
           </div>
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
+          {actions && <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end">{actions}</div>}
         </header>
-        <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main className="min-w-0 max-w-full flex-1 overflow-x-hidden px-4 py-6 sm:px-6">{children}</main>
       </div>
     </div>
   );
