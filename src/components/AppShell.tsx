@@ -101,7 +101,7 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         <header className="sticky top-0 z-20 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-card/90 px-4 py-4 backdrop-blur sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto]">
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
             <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menú">
               <Menu className="size-5" />
             </button>
