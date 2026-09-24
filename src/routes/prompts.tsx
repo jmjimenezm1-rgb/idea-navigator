@@ -138,34 +138,36 @@ function Prompts() {
         </Button>
       }
     >
-      <div className="space-y-3">
+      <div className="min-w-0 space-y-3">
         {prompts.map((p) => (
-          <Card key={p.id}>
-            <CardContent className="space-y-3 p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-display font-semibold">{p.nombre}</p>
+          <Card key={p.id} className="min-w-0 overflow-hidden">
+            <CardContent className="min-w-0 space-y-3 p-4 sm:p-5">
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="min-w-0 break-words font-display font-semibold">{p.nombre}</p>
                 <Pill tone="info">{p.categoria}</Pill>
                 <Pill tone="neutral">{p.tipo}</Pill>
                 <Pill tone={p.estado === "produccion" ? "success" : "warning"}>{p.estado}</Pill>
                 <Pill tone="neutral">v{p.version}</Pill>
-                <span className="ml-auto text-xs text-muted-foreground">{p.owner} · {p.fecha_actualizacion}</span>
+                <span className="basis-full break-words text-xs text-muted-foreground sm:basis-auto">{p.owner} · {p.fecha_actualizacion}</span>
+                </div>
                 <Button size="sm" variant="outline" onClick={() => openEdit(p)}>Editar</Button>
               </div>
-              <div className="grid gap-3 lg:grid-cols-2">
-                <div>
+              <div className="grid min-w-0 gap-3 lg:grid-cols-2">
+                <div className="min-w-0">
                   <p className="text-xs font-medium text-muted-foreground uppercase">System prompt</p>
-                  <pre className="mt-1 rounded-md bg-muted p-3 font-sans text-sm whitespace-pre-wrap">{p.sistema}</pre>
+                  <pre className="mt-1 max-w-full overflow-hidden rounded-md bg-muted p-3 font-sans text-sm whitespace-pre-wrap break-all">{p.sistema}</pre>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-medium text-muted-foreground uppercase">Plantilla</p>
-                  <pre className="mt-1 rounded-md bg-muted p-3 font-sans text-sm whitespace-pre-wrap">{p.plantilla}</pre>
+                  <pre className="mt-1 max-w-full overflow-hidden rounded-md bg-muted p-3 font-sans text-sm whitespace-pre-wrap break-all">{p.plantilla}</pre>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex min-w-0 flex-wrap gap-1">
                 {(p.variables ?? []).map((v) => (
-                  <Pill key={v} tone="neutral">{`{{${v}}}`}</Pill>
+                  <Pill key={v} tone="neutral" className="max-w-full whitespace-normal break-all">{`{{${v}}}`}</Pill>
                 ))}
-                <Pill tone="info">{p.modelo}</Pill>
+                <Pill tone="info" className="max-w-full whitespace-normal break-all">{p.modelo}</Pill>
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase">Historial de versiones</p>
@@ -173,10 +175,10 @@ function Prompts() {
                   {(p.versions ?? []).map((v) => {
                     const recoverable = (p.snapshots ?? []).some((s) => s.version === v.version);
                     return (
-                      <div key={`${v.version}-${v.fecha}`} className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2 text-xs">
+                      <div key={`${v.version}-${v.fecha}`} className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md border border-border p-2 text-xs sm:flex sm:flex-wrap">
                         <Pill tone={v.activo ? "success" : "neutral"}>v{v.version}</Pill>
-                        <span>{v.cambios}</span>
-                        <span className="ml-auto text-muted-foreground">{v.autor} · {v.fecha}</span>
+                        <span className="min-w-0 break-words">{v.cambios}</span>
+                        <span className="col-span-2 break-words text-muted-foreground sm:ml-auto">{v.autor} · {v.fecha}</span>
                         {!v.activo && recoverable && (
                           <Button
                             size="sm"
