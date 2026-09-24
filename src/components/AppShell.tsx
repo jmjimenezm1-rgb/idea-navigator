@@ -41,6 +41,7 @@ export function AppShell({
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const router = useRouter();
+  const isLeadDetail = /^\/leads\/[^/]+/.test(pathname);
 
   return (
     <div className="flex min-h-screen w-full min-w-0 overflow-x-hidden bg-background">
