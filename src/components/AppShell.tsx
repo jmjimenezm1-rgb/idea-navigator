@@ -108,14 +108,16 @@ export function AppShell({
             </button>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2 lg:col-start-1">
-            <button
-              className="shrink-0 rounded-md p-1 hover:bg-muted"
-              onClick={() => router.history.back()}
-              aria-label="Volver a la pantalla anterior"
-              title="Volver"
-            >
-              <ArrowLeft className="size-5" />
-            </button>
+            {!isLeadDetail && (
+              <button
+                className="shrink-0 rounded-md p-1 hover:bg-muted"
+                onClick={() => router.history.back()}
+                aria-label="Volver a la pantalla anterior"
+                title="Volver"
+              >
+                <ArrowLeft className="size-5" />
+              </button>
+            )}
             <div className="min-w-0">
               <h1 className="truncate font-display text-lg font-semibold">{title}</h1>
               {subtitle && <p className="truncate text-sm text-muted-foreground">{subtitle}</p>}
