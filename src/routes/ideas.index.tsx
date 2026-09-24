@@ -154,10 +154,10 @@ function IdeasPage() {
                     </div>
                   </div>
 
-                  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1 sm:flex sm:flex-wrap sm:justify-end">
-                    <Button asChild variant="outline" size="sm" className="min-w-0 justify-start sm:justify-center">
+                  <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.25rem_2.25rem] items-center gap-1 md:w-auto">
+                    <Button asChild variant="outline" size="sm" className="min-w-0 justify-between">
                       <Link to="/leads" search={{ idea: idea.id }} className="min-w-0">
-                        <span className="truncate">{leadCount} leads</span><ArrowRight className="size-4 shrink-0" />
+                        <span className="min-w-0 break-words">{leadCount} leads</span><ArrowRight className="size-4 shrink-0" />
                       </Link>
                     </Button>
                     <Button

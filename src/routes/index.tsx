@@ -171,17 +171,17 @@ function Dashboard() {
           <Kpi label="No aptos para campaña directa" value={notAllowed.length} tone="text-destructive" hint="Bloqueados hasta validación legal" to={{ allowed: "no" }} />
         </div>
 
-        <Card>
-          <CardHeader className="flex-row items-center justify-between pb-2">
+          <Card className="min-w-0 overflow-hidden">
+          <CardHeader className="grid min-w-0 grid-cols-1 gap-2 pb-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <CardTitle className="text-sm">Ideas exploradas</CardTitle>
-            <label className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+            <label className="flex min-w-0 items-start gap-2 text-xs font-normal text-muted-foreground sm:items-center">
               <input
                 type="checkbox"
                 className="size-4 accent-[var(--color-primary)]"
                 checked={onlyActive}
                 onChange={(e) => setOnlyActive(e.target.checked)}
               />
-              Mostrar solo ideas en curso
+              <span className="min-w-0 break-words">Mostrar solo ideas en curso</span>
             </label>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -196,20 +196,21 @@ function Dashboard() {
               return (
                 <div
                   key={idea.id}
-                  className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60 sm:flex sm:flex-wrap"
+                  className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
                 >
                   <FileSearch className="size-4 shrink-0 text-muted-foreground" />
                   <Link to="/ideas/$ideaId" params={{ ideaId: idea.id }} className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{idea.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="break-words text-sm font-medium">{idea.name}</p>
+                    <p className="break-words text-xs text-muted-foreground">
                       {idea.sector} · {idea.geography} · {idea.created_at}
                     </p>
                   </Link>
+                  <div className="col-span-2 grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1 sm:col-span-1 sm:w-auto sm:grid-cols-[auto_auto_auto_auto_auto]">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="col-start-2 h-auto min-w-0 justify-self-start p-0 sm:col-start-auto"
+                    className="h-auto min-w-0 justify-self-start p-0"
                     title="Cambiar estado"
                     disabled={statusMutation.isPending}
                     onClick={() => statusMutation.mutate({ ideaId: idea.id, status: nextStatus })}
@@ -245,6 +246,7 @@ function Dashboard() {
                   >
                     <Trash2 className="size-4" />
                   </Button>
+                  </div>
                 </div>
               );
             })}
@@ -253,7 +255,7 @@ function Dashboard() {
 
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+          <Card className="min-w-0 overflow-hidden lg:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Leads por sector</CardTitle>
             </CardHeader>
@@ -356,25 +358,27 @@ function Dashboard() {
                     key={idea.id}
                     to="/ideas/$ideaId"
                     params={{ ideaId: idea.id }}
-                    className="flex items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60"
+                    className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-muted/60 sm:flex sm:items-center sm:gap-3"
                   >
                     <FileSearch className="size-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{idea.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
+                      <p className="break-words text-sm font-medium">{idea.name}</p>
+                      <p className="break-words text-xs text-muted-foreground">
                         {idea.sector} · {idea.geography} · {idea.created_at}
                       </p>
                     </div>
-                    <Pill tone={idea.status === "Finalizada" ? "success" : "info"}>{idea.status}</Pill>
-                    {analysis && <Pill tone="neutral">Viabilidad {analysis.viability_score}</Pill>}
-                    <ArrowRight className="size-4 text-muted-foreground" />
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground sm:order-last" />
+                    <div className="col-start-2 flex min-w-0 flex-wrap gap-1 sm:contents">
+                      <Pill tone={idea.status === "Finalizada" ? "success" : "info"}>{idea.status}</Pill>
+                      {analysis && <Pill tone="neutral">Viabilidad {analysis.viability_score}</Pill>}
+                    </div>
                   </Link>
                 );
               })}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <AlertTriangle className="size-4 text-warning-foreground" /> Alertas
@@ -425,11 +429,11 @@ function Dashboard() {
 
 function Alert({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-border p-2.5">
-      {icon}
-      <div>
-        <p className="text-xs font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{value}</p>
+    <div className="flex min-w-0 items-start gap-2 rounded-lg border border-border p-2.5">
+      <span className="shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="break-words text-xs font-medium">{label}</p>
+        <p className="break-words text-xs text-muted-foreground">{value}</p>
       </div>
     </div>
   );
