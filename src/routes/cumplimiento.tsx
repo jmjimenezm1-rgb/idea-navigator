@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, ShieldCheck } from "lucide-react";
@@ -33,6 +33,7 @@ export const Route = createFileRoute("/cumplimiento")({
 
 function Cumplimiento() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: potentialLeads = [] } = useQuery(leadsQuery);
   const { data: ideas = [] } = useQuery(ideasQuery);
   const [ideaId, setIdeaId] = useState("todas");
@@ -228,7 +229,14 @@ function Cumplimiento() {
               </TableHeader>
               <TableBody>
                 {cola.slice(0, 20).map((l) => (
-                  <TableRow key={l.id}>
+                  <TableRow
+                    key={l.id}
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest("button,a,input,select,[role=button]")) return;
+                      void navigate({ to: "/leads/$leadId", params: { leadId: l.id } });
+                    }}
+                  >
                     <TableCell className="max-w-52 truncate text-sm font-medium">{l.company_name}</TableCell>
                     <TableCell className="max-w-40 truncate text-xs">{l.source_name}</TableCell>
                     <TableCell className="max-w-40 truncate text-xs">{l.legal_basis}</TableCell>
