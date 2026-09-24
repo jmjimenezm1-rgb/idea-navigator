@@ -52,6 +52,7 @@ const selectCls = "h-9 w-full rounded-md border border-input bg-background px-2 
 
 function LeadsPage() {
   const search = Route.useSearch();
+  const navigate = useNavigate();
   const { data: potentialLeads = [], isLoading } = useQuery(leadsQuery);
   const { data: businessIdeas = [] } = useQuery(ideasQuery);
   const [sector, setSector] = useState("");

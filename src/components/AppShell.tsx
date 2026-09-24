@@ -1,6 +1,7 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
+  ArrowLeft,
   LayoutDashboard,
   ListChecks,
   Lightbulb,
@@ -39,6 +40,7 @@ export function AppShell({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const router = useRouter();
 
   return (
     <div className="flex min-h-screen w-full min-w-0 overflow-x-hidden bg-background">
@@ -99,12 +101,24 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         <header className="sticky top-0 z-20 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-b border-border bg-card/90 px-4 py-4 backdrop-blur sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto]">
-          <button className="shrink-0 lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menú">
-            <Menu className="size-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-lg font-semibold">{title}</h1>
-            {subtitle && <p className="truncate text-sm text-muted-foreground">{subtitle}</p>}
+          <div className="flex shrink-0 items-center gap-2">
+            <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menú">
+              <Menu className="size-5" />
+            </button>
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-2 lg:col-start-1">
+            <button
+              className="shrink-0 rounded-md p-1 hover:bg-muted"
+              onClick={() => router.history.back()}
+              aria-label="Volver a la pantalla anterior"
+              title="Volver"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-lg font-semibold">{title}</h1>
+              {subtitle && <p className="truncate text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
           </div>
           {actions && <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end">{actions}</div>}
         </header>
