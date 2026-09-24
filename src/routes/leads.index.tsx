@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Download, Eye, Filter, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -358,7 +358,14 @@ function LeadsPage() {
                 {rows.map((l) => {
                   const c = l.contacts[0];
                   return (
-                    <TableRow key={l.id}>
+                    <TableRow
+                      key={l.id}
+                      className="cursor-pointer"
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest("button,a,input,select,[role=button]")) return;
+                        void navigate({ to: "/leads/$leadId", params: { leadId: l.id } });
+                      }}
+                    >
                       <TableCell className="max-w-56">
                         <p className="truncate font-medium">{l.company_name}</p>
                         <p className="truncate text-xs text-muted-foreground">{l.city}</p>
