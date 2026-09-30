@@ -42,6 +42,7 @@ function Cumplimiento() {
   const [onlyActive, setOnlyActive] = useState(true);
   const [notesFilter, setNotesFilter] = useState("");
   const [zoneFilter, setZoneFilter] = useState("");
+  const [onlyNoSource, setOnlyNoSource] = useState(false);
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["leads"] });
 
   const rulesMutation = useMutation({
@@ -99,7 +100,9 @@ function Cumplimiento() {
   const sinFuente = scoped.filter((l) => !l.source_url);
   const pendientes = scoped.filter((l) => l.contact_allowed === "pendiente");
   const bloqueados = scoped.filter((l) => l.contact_allowed === "no");
-  const cola = contactFilter === "todos" ? [...bloqueados, ...pendientes] : scoped;
+  const cola = onlyNoSource ? sinFuente : contactFilter === "todos" ? [...bloqueados, ...pendientes] : scoped;
+  const cardCls = (active: boolean) =>
+    `cursor-pointer transition-colors hover:bg-muted/60 ${active ? "ring-2 ring-primary" : ""}`;
   const ideaName = ideas.find((i) => i.id === ideaId)?.name;
 
   return (
@@ -187,9 +190,9 @@ function Cumplimiento() {
         </Card>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Sin fuente trazable</p><p className="font-display text-2xl font-semibold text-destructive">{sinFuente.length}</p></CardContent></Card>
-          <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Pendientes de validación</p><p className="font-display text-2xl font-semibold text-warning-foreground">{pendientes.length}</p></CardContent></Card>
-          <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Bloqueados para contacto</p><p className="font-display text-2xl font-semibold text-destructive">{bloqueados.length}</p></CardContent></Card>
+          <Card className={cardCls(onlyNoSource)} onClick={() => { setOnlyNoSource(!onlyNoSource); setContactFilter("todos"); }}><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Sin fuente trazable</p><p className="font-display text-2xl font-semibold text-destructive">{sinFuente.length}</p></CardContent></Card>
+          <Card className={cardCls(!onlyNoSource && contactFilter === "pendiente")} onClick={() => { setOnlyNoSource(false); setContactFilter(contactFilter === "pendiente" ? "todos" : "pendiente"); }}><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Pendientes de validación</p><p className="font-display text-2xl font-semibold text-warning-foreground">{pendientes.length}</p></CardContent></Card>
+          <Card className={cardCls(!onlyNoSource && contactFilter === "no")} onClick={() => { setOnlyNoSource(false); setContactFilter(contactFilter === "no" ? "todos" : "no"); }}><CardContent className="p-4"><p className="text-xs text-muted-foreground uppercase">Bloqueados para contacto</p><p className="font-display text-2xl font-semibold text-destructive">{bloqueados.length}</p></CardContent></Card>
         </div>
 
 
@@ -210,7 +213,7 @@ function Cumplimiento() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Cola de revisión legal</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Cola de revisión legal · {cola.length} registro(s)</CardTitle></CardHeader>
           <CardContent className="overflow-x-auto p-0">
             <Table>
               <TableHeader>
@@ -228,7 +231,7 @@ function Cumplimiento() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cola.slice(0, 20).map((l) => (
+                {cola.map((l) => (
                   <TableRow
                     key={l.id}
                     className="cursor-pointer"
