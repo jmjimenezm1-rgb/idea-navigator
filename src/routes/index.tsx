@@ -6,6 +6,7 @@ import {
   Cell,
   Pie,
   PieChart,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -81,7 +82,7 @@ function Kpi({
   if (!to) return <Card className="shadow-none">{body}</Card>;
   return (
     <Card className="shadow-none transition-colors hover:bg-muted/60">
-      <Link to="/leads" search={to} className="block">
+      <Link to="/leads" search={to as never} className="block">
         {body}
       </Link>
     </Card>
@@ -138,6 +139,7 @@ function Dashboard() {
     [allLeads, ideaIds],
   );
 
+  const scopeSearch: Record<string, string> = onlyActive ? { activas: "true" } : {};
   const validated = leads.filter((l) => ["Validado", "Consentimiento obtenido", "Convertido en cliente"].includes(l.validation_status));
   const pending = leads.filter((l) => l.validation_status.startsWith("Pendiente"));
   const notAllowed = leads.filter((l) => l.contact_allowed === "no");
@@ -166,9 +168,9 @@ function Dashboard() {
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi label="Ideas exploradas" value={businessIdeas.length} hint={`${businessIdeas.filter((i) => i.status === "En curso").length} en curso · ${businessIdeas.filter((i) => i.status === "Finalizada").length} finalizadas`} />
-          <Kpi label="Leads identificados" value={leads.length} hint="Ver todos los leads del ámbito" to={{}} />
-          <Kpi label="Leads validados" value={validated.length} tone="text-success" hint="Con fuente y base jurídica" to={{ status: "Validado" }} />
-          <Kpi label="No aptos para campaña directa" value={notAllowed.length} tone="text-destructive" hint="Bloqueados hasta validación legal" to={{ allowed: "no" }} />
+          <Kpi label="Leads identificados" value={leads.length} hint="Ver todos los leads del ámbito" to={{ ...scopeSearch }} />
+          <Kpi label="Leads validados" value={validated.length} tone="text-success" hint="Con fuente y base jurídica" to={{ ...scopeSearch, status: "validados" }} />
+          <Kpi label="No aptos para campaña directa" value={notAllowed.length} tone="text-destructive" hint="Bloqueados hasta validación legal" to={{ ...scopeSearch, allowed: "no" }} />
         </div>
 
           <Card className="min-w-0 overflow-hidden">
@@ -279,12 +281,13 @@ function Dashboard() {
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={byStatus} dataKey="value" nameKey="name" innerRadius={45} outerRadius={80}>
+                  <Pie data={byStatus} dataKey="value" nameKey="name" innerRadius={35} outerRadius={60}>
                     {byStatus.map((_, i) => (
                       <Cell key={i} fill={chartColors[i % chartColors.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -329,15 +332,16 @@ function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Distribución por tamaño de empresa</CardTitle>
             </CardHeader>
-            <CardContent className="h-56">
+            <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={bySize} dataKey="value" nameKey="name" outerRadius={78}>
+                  <Pie data={bySize} dataKey="value" nameKey="name" outerRadius={55}>
                     {bySize.map((_, i) => (
                       <Cell key={i} fill={chartColors[i % chartColors.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>

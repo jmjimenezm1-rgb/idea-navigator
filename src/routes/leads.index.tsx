@@ -23,6 +23,7 @@ type LeadsSearch = {
   allowed?: string | undefined;
   risk?: string | undefined;
   sinFuente?: boolean | undefined;
+  activas?: boolean | undefined;
 };
 
 export const Route = createFileRoute("/leads/")({
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/leads/")({
     status: typeof search["status"] === "string" ? (search["status"] as string) : undefined,
     allowed: typeof search["allowed"] === "string" ? (search["allowed"] as string) : undefined,
     risk: typeof search["risk"] === "string" ? (search["risk"] as string) : undefined,
+    activas: search["activas"] === true || search["activas"] === "true" ? true : undefined,
     sinFuente: search["sinFuente"] === true || search["sinFuente"] === "true" ? true : undefined,
   }),
   component: LeadsPage,
@@ -64,6 +66,12 @@ function LeadsPage() {
   const [idea, setIdea] = useState(search.idea ?? "");
   const [sinFuente, setSinFuente] = useState(search.sinFuente ?? false);
   const [showArchived, setShowArchived] = useState(false);
+  const [onlyActive, setOnlyActive] = useState(search.activas ?? false);
+  const activeIdeaIds = useMemo(
+    () => new Set(businessIdeas.filter((i) => i.status === "En curso" && !i.archived).map((i) => i.id)),
+    [businessIdeas],
+  );
+  const validatedStatuses = ["Validado", "Consentimiento obtenido", "Convertido en cliente"];
   const [minScore, setMinScore] = useState(0);
   const [q, setQ] = useState("");
 
@@ -113,14 +121,16 @@ function LeadsPage() {
           (!sector || l.sector === sector) &&
           (!country || l.country === country) &&
           (!size || l.company_size === size) &&
-          (!status || l.validation_status === status) &&
+          (!onlyActive || activeIdeaIds.has(l.business_idea_id)) &&
+          (!status ||
+            (status === "validados" ? validatedStatuses.includes(l.validation_status) : l.validation_status === status)) &&
           (!allowed || l.contact_allowed === allowed) &&
           (!risk || l.risk_level === risk) &&
           (!idea || l.business_idea_id === idea) &&
           l.opportunity_score >= minScore &&
           (!q || l.company_name.toLowerCase().includes(q.toLowerCase())),
       ),
-    [potentialLeads, sector, country, size, status, allowed, risk, idea, minScore, q, showArchived, sinFuente],
+    [potentialLeads, sector, country, size, status, allowed, risk, idea, minScore, q, showArchived, sinFuente, onlyActive, activeIdeaIds],
   );
 
   const uniq = (fn: (l: (typeof potentialLeads)[number]) => string) => [...new Set(potentialLeads.map(fn))];
@@ -276,6 +286,7 @@ function LeadsPage() {
                 <Label className="text-xs text-muted-foreground">Estado</Label>
                 <select className={selectCls} value={status} onChange={(e) => setStatus(e.target.value)}>
                   <option value="">Todos</option>
+                  <option value="validados">Validados (todos)</option>
                   {validationStatuses.map((s) => (
                     <option key={s}>{s}</option>
                   ))}
@@ -320,6 +331,15 @@ function LeadsPage() {
                   onChange={(e) => setShowArchived(e.target.checked)}
                 />
                 Mostrar leads archivados
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--color-primary)]"
+                  checked={onlyActive}
+                  onChange={(e) => setOnlyActive(e.target.checked)}
+                />
+                Solo leads de ideas en curso
               </label>
               <label className="flex items-center gap-2">
                 <input
