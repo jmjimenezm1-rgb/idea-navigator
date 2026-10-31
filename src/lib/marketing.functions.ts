@@ -1089,7 +1089,7 @@ export const discoverLeads = createServerFn({ method: "POST" })
     const country = data.country || String(idea["target_market"] ?? "España");
 
     // 1) Recuperación pública real con el conector configurado.
-    const { searchWeb, pickConnector } = await import("./web-retrieval.server");
+    const { searchWeb, pickConnector, loadWebConnectors } = await import("./web-retrieval.server");
     const connector = await pickConnector("search");
     const query = [
       "empresas",
@@ -1108,22 +1108,35 @@ export const discoverLeads = createServerFn({ method: "POST" })
     let retrievedAt = new Date().toISOString();
     let retrievalNote = "";
 
-    if (!connector || !connector.enabled) {
-      retrievalNote = "Búsqueda web desactivada: no hay ninguna fuente de extracción habilitada.";
-    } else if (!connector.hasKey) {
-      retrievalNote = `Búsqueda web desactivada: falta el secreto ${connector.apiKeySecretName}.`;
+    // Usa todas las fuentes de búsqueda habilitadas y con credencial, combinando resultados.
+    const searchers = (await loadWebConnectors()).filter((c) => c.canSearch && c.enabled && c.hasKey);
+    if (!searchers.length) {
+      retrievalNote =
+        !connector || !connector.enabled
+          ? "Búsqueda web desactivada: no hay ninguna fuente de búsqueda habilitada."
+          : `Búsqueda web desactivada: falta el secreto ${connector.apiKeySecretName}.`;
     } else {
-      const found = await searchWeb(query, { limit: Math.min(data.limit * 2, 20), connector });
-      if (found.ok) {
-        hits = found.hits;
-        provider = found.provider;
-        retrievedAt = found.retrievedAt;
-        evidence = hits
-          .map((h, i) => `${i + 1}. ${h.title} — ${h.url}\n${h.description}`)
-          .join("\n\n");
-      } else {
-        retrievalNote = `Búsqueda web no disponible: ${found.error}`;
-      }
+      const perSource = Math.max(3, Math.ceil(Math.min(data.limit * 2, 20) / searchers.length));
+      const results = await Promise.all(searchers.map((c) => searchWeb(query, { limit: perSource, connector: c })));
+      const seen = new Set<string>();
+      const providers: string[] = [];
+      const errors: string[] = [];
+      results.forEach((found, i) => {
+        if (!found.ok) {
+          errors.push(`${searchers[i]!.name}: ${found.error}`);
+          return;
+        }
+        providers.push(found.provider);
+        for (const h of found.hits) {
+          const k = h.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "").toLowerCase();
+          if (seen.has(k)) continue;
+          seen.add(k);
+          hits.push(h);
+        }
+      });
+      provider = providers.join(" + ");
+      evidence = hits.map((h, i) => `${i + 1}. ${h.title} — ${h.url}\n${h.description}`).join("\n\n");
+      if (!hits.length) retrievalNote = `Búsqueda web no disponible: ${errors.join(" | ")}`;
     }
 
     if (!hits.length) {
