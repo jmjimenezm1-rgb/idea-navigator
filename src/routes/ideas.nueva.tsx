@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Loader2, Save, Search, Sparkles } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { createIdeaWithAnalysis } from "@/lib/marketing.functions";
+import { sourcesQuery } from "@/lib/marketing-queries";
 
 import { AppShell } from "@/components/AppShell";
 import { Pill } from "@/components/StatusBadges";
@@ -34,6 +35,17 @@ export const Route = createFileRoute("/ideas/nueva")({
 
 const steps = ["Descripción de la idea", "Cliente objetivo", "Criterios de búsqueda", "Restricciones", "Lanzar análisis"];
 
+type SourceOption = {
+  id: string;
+  name: string;
+  type: string;
+  enabled: boolean;
+  requires_api_key: boolean;
+  status: string;
+  usage_policy?: string;
+  config?: { has_api_key?: boolean; api_key_secret_name?: string };
+};
+
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <div className="space-y-1.5">
@@ -59,6 +71,19 @@ function NuevaExploracion() {
   const [constraints, setConstraints] = useState("");
   const [competitors, setCompetitors] = useState("");
 
+  // Fuentes dadas de alta en "Fuentes de datos": todas se pueden marcar, estén o no configuradas.
+  const { data: sources = [] } = useQuery(sourcesQuery);
+  const sourceList = sources as unknown as SourceOption[];
+  const enabledSources = sourceList.filter((s) => s.enabled).map((s) => s.name);
+  const [preferred, setPreferred] = useState<string[] | null>(null);
+  const preferredSources = preferred ?? enabledSources;
+
+  const toggleSource = (sourceName: string, on: boolean) =>
+    setPreferred((prev) => {
+      const base = prev ?? enabledSources;
+      return on ? [...new Set([...base, sourceName])] : base.filter((n) => n !== sourceName);
+    });
+
   const createIdea = useMutation({
     mutationFn: () =>
       createIdeaWithAnalysis({
@@ -71,6 +96,7 @@ function NuevaExploracion() {
           geography,
           legal_constraints: constraints,
           competitors,
+          preferred_sources: preferredSources,
         },
       }),
     onSuccess: (result) => {
@@ -228,16 +254,60 @@ function NuevaExploracion() {
                   </select>
                 </Field>
                 <div className="sm:col-span-2">
-                  <Field label="Fuentes preferidas" hint="En esta versión solo están activas las fuentes demo y la carga manual.">
+                  <Field
+                    label={`Fuentes preferidas · ${preferredSources.length} de ${sourceList.length || 0} marcadas`}
+                    hint="Puedes marcar cualquier fuente, esté configurada o pendiente de configurar. Las marcadas se usan al buscar clientes para esta idea; si ninguna marcada tiene clave activa, se usa otra fuente operativa y queda registrado."
+                  >
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {["Datos simulados (demo)", "Carga manual / URLs", "Firecrawl (futuro)", "Apify (futuro)", "Google Custom Search (futuro)", "CRM interno (futuro)"].map(
-                        (s, i) => (
-                          <label key={s} className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
-                            <Checkbox defaultChecked={i < 2} disabled={i >= 2} />
-                            <span className={i >= 2 ? "text-muted-foreground" : ""}>{s}</span>
-                          </label>
-                        ),
+                      {sourceList.length === 0 && (
+                        <p className="text-xs text-muted-foreground sm:col-span-2">
+                          Cargando fuentes dadas de alta en «Fuentes de datos»…
+                        </p>
                       )}
+                      {sourceList.map((s) => {
+                        const on = preferredSources.includes(s.name);
+                        return (
+                          <label
+                            key={s.id}
+                            className={`flex cursor-pointer items-start gap-2 rounded-md border p-2.5 text-sm transition-colors ${
+                              on ? "border-primary/50 bg-primary/5" : "border-border"
+                            }`}
+                          >
+                            <Checkbox
+                              className="mt-0.5"
+                              checked={on}
+                              onCheckedChange={(c) => toggleSource(s.name, c === true)}
+                            />
+                            <span className="min-w-0 break-words">
+                              <span className="block font-medium">{s.name}</span>
+                              <span className="block text-xs text-muted-foreground">
+                                {s.status}
+                                {s.requires_api_key
+                                  ? s.config?.has_api_key
+                                    ? " · clave guardada"
+                                    : " · falta la clave"
+                                  : " · sin clave"}
+                                {s.config?.api_key_secret_name ? ` · secreto: ${s.config.api_key_secret_name}` : ""}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPreferred(sourceList.map((s) => s.name))}
+                      >
+                        Marcar todas
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setPreferred(enabledSources)}>
+                        Solo las habilitadas
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setPreferred([])}>
+                        Ninguna
+                      </Button>
                     </div>
                   </Field>
                 </div>
@@ -284,7 +354,13 @@ function NuevaExploracion() {
                   <Pill tone="info">Modo activo: análisis IA real</Pill>
                   <Pill tone="neutral">Prompt: Analisis_Viabilidad_Idea v1.2</Pill>
                   <Pill tone="neutral">Modelo: google/gemini-3.6-flash</Pill>
+                  <Pill tone="neutral">Fuentes preferidas: {preferredSources.length}</Pill>
                 </div>
+                {preferredSources.length > 0 && (
+                  <p className="text-xs text-muted-foreground break-words">
+                    Fuentes marcadas: {preferredSources.join(", ")}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     disabled={createIdea.isPending || !name.trim() || !description.trim()}
