@@ -35,7 +35,7 @@ export const Route = createFileRoute("/leads/$leadId")({
   component: LeadDetail,
   errorComponent: ({ error }) => (
     <AppShell title="Error al cargar el lead">
-      <p className="text-sm text-muted-foreground">{error.message}</p>
+      <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
     </AppShell>
   ),
   notFoundComponent: () => (

@@ -157,6 +157,7 @@ function Fuentes() {
               <p className="text-xs text-muted-foreground">
                 {s.type}
                 {s.requires_api_key ? (s.config?.has_api_key ? " · clave de API guardada" : " · falta la clave de API") : ""}
+                {s.requires_api_key && s.config?.api_key_secret_name ? ` · secreto: ${s.config.api_key_secret_name}` : ""}
                 {s.config?.rate_limit_per_min ? ` · ${s.config.rate_limit_per_min} req/min` : ""}
                 {s.config?.respect_robots === false ? " · robots.txt ignorado" : " · respeta robots.txt"}
               </p>

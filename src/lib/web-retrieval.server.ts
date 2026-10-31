@@ -36,6 +36,14 @@ const DEFAULTS: Record<ConnectorProvider, { gateway: string; direct: string }> =
   other: { gateway: "", direct: "" },
 };
 
+/** Nombre de secreto por defecto de cada conector: la clave se da de alta después, sin tocar código. */
+export const DEFAULT_SECRET: Record<ConnectorProvider, string> = {
+  firecrawl: "FIRECRAWL_API_KEY",
+  apify: "APIFY_API_KEY",
+  google_cse: "GOOGLE_CSE_API_KEY",
+  other: "",
+};
+
 export function detectProvider(text: string): ConnectorProvider {
   if (/firecrawl/i.test(text)) return "firecrawl";
   if (/apify/i.test(text)) return "apify";
@@ -73,7 +81,7 @@ function toConnector(
   const config = (payload["config"] ?? {}) as Record<string, any>;
   const provider = detectProvider(`${row.id} ${row.name} ${row.type}`);
   const apiKeySecretName = String(
-    config["api_key_secret_name"] || (provider === "firecrawl" ? "FIRECRAWL_API_KEY" : provider === "apify" ? "APIFY_API_KEY" : ""),
+    config["api_key_secret_name"] || DEFAULT_SECRET[provider],
   );
   const key = storedKey || (apiKeySecretName ? process.env[apiKeySecretName] : undefined);
   const mode = key ? (key.startsWith("lovc_") ? "gateway" : "direct") : "gateway";
@@ -342,8 +350,8 @@ export async function searchWeb(
   let response: Response;
   try {
     if (connector.provider === "google_cse") {
-      const cx = /cx\s*[=:]\s*([\w-]+)/i.exec(connector.notes)?.[1];
-      if (!cx) return { ok: false, error: "Falta el identificador del buscador (cx=...) en las notas de la fuente Google Custom Search." };
+      const cx = /cx\s*[=:]\s*([\w-]+)/i.exec(connector.notes)?.[1] || process.env["GOOGLE_CSE_CX"];
+      if (!cx) return { ok: false, error: "Falta el identificador del buscador (cx=... en las notas o secreto GOOGLE_CSE_CX)." };
       const url = new URL(connector.baseUrl || "https://www.googleapis.com/customsearch/v1");
       url.searchParams.set("key", key);
       url.searchParams.set("cx", cx);
